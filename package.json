@@ -1,0 +1,72 @@
+{
+  "name": "chat-graph",
+  "version": "0.1.0",
+  "description": "A conversational flow engine with two-phase nodes (action + validation) and support for both JSON configuration and function-based definitions",
+  "keywords": [
+    "chat",
+    "flow",
+    "conversational",
+    "chatbot",
+    "workflow",
+    "state-machine",
+    "typescript"
+  ],
+  "author": "TheMoenix",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TheMoenix/chat-graph.git"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "scripts": {
+    "dev": "ts-node-dev --respawn examples/interactive.ts",
+    "example": "ts-node examples/interactive.ts",
+    "build": "npm run build:types && npm run build:esm && npm run build:cjs",
+    "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist",
+    "build:esm": "tsc --module esnext --outDir dist --declaration false --declarationMap false",
+    "build:cjs": "tsc --module commonjs --outDir dist --declaration false --declarationMap false",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "format": "prettier --write \"**/*.{ts,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,json,md}\"",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run lint && npm run typecheck && npm run build && npm test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.10.1",
+    "@typescript-eslint/eslint-plugin": "^8.48.0",
+    "@typescript-eslint/parser": "^8.48.0",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "jest": "^30.2.0",
+    "prettier": "^3.7.1",
+    "ts-jest": "^29.4.5",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.9.3"
+  }
+}
