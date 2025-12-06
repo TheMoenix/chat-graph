@@ -1,6 +1,6 @@
 {
   "name": "chat-graph",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A conversational flow engine with two-phase nodes (action + validation) and support for both JSON configuration and function-based definitions",
   "keywords": [
     "chat",
