@@ -7,7 +7,8 @@ describe('Flow', () => {
     it('should create a flow and add nodes', () => {
       const flow = new Flow('test-flow');
 
-      flow.addNode('greet', {
+      flow.addNode({
+        id: 'greet',
         action: { message: 'Hello!' },
       });
 
@@ -18,7 +19,8 @@ describe('Flow', () => {
       const flow = new Flow('test');
 
       flow
-        .addNode('greet', {
+        .addNode({
+          id: 'greet',
           action: { message: 'Hello!' },
         })
         .addEdge(START, 'greet')
@@ -44,10 +46,13 @@ describe('Flow', () => {
       const flow = new Flow('test');
 
       flow
-        .addNode('askName', {
+        .addNode({
+          id: 'askName',
           action: { message: 'What is your name?' },
-          validate: { regex: '\\w+', errorMessage: 'Invalid name' },
-          targetField: 'name',
+          validate: {
+            rules: [{ regex: '\\w+', errorMessage: 'Invalid name' }],
+            targetField: 'name',
+          },
         })
         .addEdge(START, 'askName')
         .addEdge('askName', END);
@@ -72,10 +77,13 @@ describe('Flow', () => {
       const flow = new Flow('test');
 
       flow
-        .addNode('askName', {
+        .addNode({
+          id: 'askName',
           action: { message: 'What is your name?' },
-          validate: { regex: '\\w+', errorMessage: 'Invalid name' },
-          targetField: 'name',
+          validate: {
+            rules: [{ regex: '\\w+', errorMessage: 'Invalid name' }],
+            targetField: 'name',
+          },
         })
         .addEdge(START, 'askName')
         .addEdge('askName', END);
@@ -109,13 +117,15 @@ describe('Flow', () => {
       const flow = new Flow('test');
 
       flow
-        .addNode('askEmail', {
+        .addNode({
+          id: 'askEmail',
           action: { message: 'Enter email:' },
           validate: {
-            regex: '^\\S+@\\S+\\.\\S+$',
-            errorMessage: 'Invalid email',
+            rules: [
+              { regex: '^\\S+@\\S+\\.\\S+$', errorMessage: 'Invalid email' },
+            ],
+            targetField: 'email',
           },
-          targetField: 'email',
         })
         .addEdge(START, 'askEmail')
         .addEdge('askEmail', END);
@@ -149,13 +159,16 @@ describe('Flow', () => {
       const flow = new Flow('test');
 
       flow
-        .addNode('askName', {
+        .addNode({
+          id: 'askName',
           action: { message: 'Name?' },
-          validate: [
-            { regex: '\\w+', errorMessage: 'Name required' },
-            { regex: '.{2,}', errorMessage: 'Min 2 chars' },
-          ],
-          targetField: 'name',
+          validate: {
+            rules: [
+              { regex: '\\w+', errorMessage: 'Name required' },
+              { regex: '.{2,}', errorMessage: 'Min 2 chars' },
+            ],
+            targetField: 'name',
+          },
         })
         .addEdge(START, 'askName')
         .addEdge('askName', END);
@@ -203,7 +216,8 @@ describe('Flow', () => {
       const flow = new Flow('test');
 
       flow
-        .addNode('greet', {
+        .addNode({
+          id: 'greet',
           action: { message: 'Hello, {name}!' },
         })
         .addEdge(START, 'greet')
@@ -229,19 +243,27 @@ describe('Flow', () => {
       const flow = new Flow('test');
 
       flow
-        .addNode('askAge', {
+        .addNode({
+          id: 'askAge',
           action: { message: 'Age?' },
-          validate: { regex: '^\\d+$', errorMessage: 'Enter number' },
-          targetField: 'age',
+          validate: {
+            rules: [{ regex: '^\\d+$', errorMessage: 'Enter number' }],
+            targetField: 'age',
+          },
         })
-        .addNode('convertAge', (state) => ({
-          messages: [],
-          updates: { age: parseInt(state.age) },
-        }))
-        .addNode('adult', {
+        .addNode({
+          id: 'convertAge',
+          action: (state) => ({
+            messages: [],
+            updates: { age: parseInt(state.age) },
+          }),
+        })
+        .addNode({
+          id: 'adult',
           action: { message: 'You are {age}+' },
         })
-        .addNode('minor', {
+        .addNode({
+          id: 'minor',
           action: { message: 'Under 18' },
         })
         .addEdge(START, 'askAge')
@@ -297,10 +319,13 @@ describe('Flow', () => {
       const flow = new Flow('test');
 
       flow
-        .addNode('process', async (state, event) => ({
-          messages: ['Processing...'],
-          updates: { processed: true },
-        }))
+        .addNode({
+          id: 'process',
+          action: async (state, event) => ({
+            messages: ['Processing...'],
+            updates: { processed: true },
+          }),
+        })
         .addEdge(START, 'process')
         .addEdge('process', END);
 
@@ -323,7 +348,8 @@ describe('Flow', () => {
       const flow = new Flow('test');
 
       flow
-        .addNode('custom', {
+        .addNode({
+          id: 'custom',
           action: { message: 'Enter code:' },
           validate: async (state, event) => {
             const isValid = event.payload === 'SECRET';
@@ -373,8 +399,8 @@ describe('Flow', () => {
       const flow = new Flow('test');
 
       const result = flow
-        .addNode('a', { action: { message: 'A' } })
-        .addNode('b', { action: { message: 'B' } })
+        .addNode({ id: 'a', action: { message: 'A' } })
+        .addNode({ id: 'b', action: { message: 'B' } })
         .addEdge(START, 'a')
         .addEdge('a', 'b')
         .addEdge('b', END);

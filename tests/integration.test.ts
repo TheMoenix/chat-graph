@@ -7,38 +7,48 @@ describe('Integration Tests', () => {
       const flow = new Flow('onboarding');
 
       flow
-        .addNode('greet', {
+        .addNode({
+          id: 'greet',
           action: { message: "Hi! What's your name?" },
-          validate: [
-            { regex: '\\w+', errorMessage: 'Name required' },
-            { regex: '.{2,}', errorMessage: 'Min 2 chars' },
-          ],
-          targetField: 'name',
+          validate: {
+            rules: [
+              { regex: '\\w+', errorMessage: 'Name required' },
+              { regex: '.{2,}', errorMessage: 'Min 2 chars' },
+            ],
+            targetField: 'name',
+          },
         })
-        .addNode('askEmail', {
+        .addNode({
+          id: 'askEmail',
           action: { message: 'Nice to meet you, {name}! Email?' },
           validate: {
-            regex: '^\\S+@\\S+\\.\\S+$',
-            errorMessage: 'Invalid email',
+            rules: [
+              { regex: '^\\S+@\\S+\\.\\S+$', errorMessage: 'Invalid email' },
+            ],
+            targetField: 'email',
           },
-          targetField: 'email',
         })
-        .addNode('askAge', {
+        .addNode({
+          id: 'askAge',
           action: { message: 'How old are you?' },
           validate: {
-            regex: '^\\d+$',
-            errorMessage: 'Enter a number',
+            rules: [{ regex: '^\\d+$', errorMessage: 'Enter a number' }],
+            targetField: 'age',
           },
-          targetField: 'age',
         })
-        .addNode('processAge', (state) => ({
-          messages: [],
-          updates: { age: parseInt(state.age) },
-        }))
-        .addNode('adult', {
+        .addNode({
+          id: 'processAge',
+          action: (state) => ({
+            messages: [],
+            updates: { age: parseInt(state.age) },
+          }),
+        })
+        .addNode({
+          id: 'adult',
           action: { message: "Welcome, {name}! You're {age}." },
         })
-        .addNode('minor', {
+        .addNode({
+          id: 'minor',
           action: { message: 'Sorry {name}, must be 18+.' },
         })
         .addEdge(START, 'greet')
@@ -123,16 +133,23 @@ describe('Integration Tests', () => {
       const flow = new Flow('age-check');
 
       flow
-        .addNode('askAge', {
+        .addNode({
+          id: 'askAge',
           action: { message: 'Age?' },
-          validate: { regex: '^\\d+$', errorMessage: 'Number only' },
-          targetField: 'age',
+          validate: {
+            rules: [{ regex: '^\\d+$', errorMessage: 'Number only' }],
+            targetField: 'age',
+          },
         })
-        .addNode('convert', (state) => ({
-          messages: [],
-          updates: { age: parseInt(state.age) },
-        }))
-        .addNode('minor', {
+        .addNode({
+          id: 'convert',
+          action: (state) => ({
+            messages: [],
+            updates: { age: parseInt(state.age) },
+          }),
+        })
+        .addNode({
+          id: 'minor',
           action: { message: 'Under 18: {age}' },
         })
         .addEdge(START, 'askAge')
@@ -140,7 +157,8 @@ describe('Integration Tests', () => {
         .addConditionalEdge('convert', (state) =>
           state.age >= 18 ? 'adult' : 'minor'
         )
-        .addNode('adult', {
+        .addNode({
+          id: 'adult',
           action: { message: 'Over 18: {age}' },
         })
         .addEdge('adult', END)
@@ -171,25 +189,31 @@ describe('Integration Tests', () => {
       const flow = new Flow('quiz');
 
       flow
-        .addNode('askScore', {
+        .addNode({
+          id: 'askScore',
           action: { message: 'Enter score (0-100):' },
           validate: {
-            regex: '^\\d+$',
-            errorMessage: 'Number required',
+            rules: [{ regex: '^\\d+$', errorMessage: 'Number required' }],
+            targetField: 'score',
           },
-          targetField: 'score',
         })
-        .addNode('convert', (state) => ({
-          messages: [],
-          updates: { score: parseInt(state.score) },
-        }))
-        .addNode('excellent', {
+        .addNode({
+          id: 'convert',
+          action: (state) => ({
+            messages: [],
+            updates: { score: parseInt(state.score) },
+          }),
+        })
+        .addNode({
+          id: 'excellent',
           action: { message: 'Excellent! {score}%' },
         })
-        .addNode('good', {
+        .addNode({
+          id: 'good',
           action: { message: 'Good job! {score}%' },
         })
-        .addNode('fail', {
+        .addNode({
+          id: 'fail',
           action: { message: 'Failed: {score}%' },
         })
         .addEdge(START, 'askScore')
@@ -244,17 +268,24 @@ describe('Integration Tests', () => {
       const flow = new Flow('survey');
 
       flow
-        .addNode('q1', {
+        .addNode({
+          id: 'q1',
           action: { message: 'Question 1?' },
-          validate: { regex: '.+', errorMessage: 'Required' },
-          targetField: 'answer1',
+          validate: {
+            rules: [{ regex: '.+', errorMessage: 'Required' }],
+            targetField: 'answer1',
+          },
         })
-        .addNode('q2', {
+        .addNode({
+          id: 'q2',
           action: { message: 'Question 2?' },
-          validate: { regex: '.+', errorMessage: 'Required' },
-          targetField: 'answer2',
+          validate: {
+            rules: [{ regex: '.+', errorMessage: 'Required' }],
+            targetField: 'answer2',
+          },
         })
-        .addNode('summary', {
+        .addNode({
+          id: 'summary',
           action: { message: 'Q1: {answer1}, Q2: {answer2}' },
         })
         .addEdge(START, 'q1')

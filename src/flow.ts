@@ -2,10 +2,12 @@ import type {
   State,
   ChatEvent,
   StepResult,
-  NodeDefinition,
   ActionResult,
   ValidationResult,
-  NodeConfig,
+  Node,
+  NodeAction,
+  NodeValidate,
+  ExecutableNode,
 } from './types';
 
 /**
@@ -31,7 +33,7 @@ export class Flow {
   private readonly id: string;
   private readonly name: string;
   private startNodeId: string;
-  private readonly nodes: Map<string, NodeDefinition> = new Map();
+  private readonly nodes: Map<string, ExecutableNode> = new Map();
   private readonly edges: Map<string, string> = new Map();
   private readonly conditionalEdges: Map<string, (state: State) => string> =
     new Map();
@@ -71,20 +73,17 @@ export class Flow {
    * }));
    * ```
    */
-  addNode(id: string, config: NodeConfig): this {
-    // If config is a function, treat it as action-only node
-    if (typeof config === 'function') {
-      this.nodes.set(id, { id, action: config });
-      return this;
-    }
-
+  addNode(node: Node): this {
     // Convert config to NodeDefinition
-    const actionFn = this.createAction(config.action);
-    const validateFn = config.validate
-      ? this.createValidate(config.validate, config.targetField)
+    const actionFn = this.createAction(node.action);
+    const validateFn = node.validate
+      ? this.createValidate(node.validate)
       : undefined;
-
-    this.nodes.set(id, { id, action: actionFn, validate: validateFn });
+    this.nodes.set(node.id, {
+      id: node.id,
+      action: actionFn,
+      validate: validateFn,
+    });
     return this;
   }
 
@@ -247,12 +246,7 @@ export class Flow {
    * Creates an action function from config
    */
   private createAction(
-    action:
-      | { message: string }
-      | ((
-          state: State,
-          event: ChatEvent
-        ) => ActionResult | Promise<ActionResult>)
+    action: NodeAction
   ): (state: State, event: ChatEvent) => ActionResult | Promise<ActionResult> {
     if (typeof action === 'function') {
       return action;
@@ -268,24 +262,23 @@ export class Flow {
    * Creates a validation function from config
    */
   private createValidate(
-    validate:
-      | { regex: string; errorMessage: string }
-      | Array<{ regex: string; errorMessage: string }>
-      | ((
-          state: State,
-          event: ChatEvent
-        ) => ValidationResult | Promise<ValidationResult>),
-    targetField?: string | null
+    validate: NodeValidate | null
   ): (
     state: State,
     event: ChatEvent
   ) => ValidationResult | Promise<ValidationResult> {
+    if (!validate) {
+      return () => ({ isValid: true });
+    }
+
     if (typeof validate === 'function') {
       return validate;
     }
 
     // Array of validators (run all in sequence)
-    const validators = Array.isArray(validate) ? validate : [validate];
+    const rules = Array.isArray(validate.rules)
+      ? validate.rules
+      : [validate.rules];
 
     return (state: State, event: ChatEvent): ValidationResult => {
       if (event.type !== 'user_message') {
@@ -295,7 +288,7 @@ export class Flow {
       const input = event.payload;
 
       // Run all validators
-      for (const validator of validators) {
+      for (const validator of rules) {
         const regex = new RegExp(validator.regex);
         if (!regex.test(input)) {
           return {
@@ -306,7 +299,10 @@ export class Flow {
       }
 
       // All passed - save to targetField if specified
-      const updates = targetField ? { [targetField]: input } : {};
+      const updates =
+        validate && 'targetField' in validate && validate.targetField
+          ? { [validate.targetField]: input }
+          : {};
 
       return {
         isValid: true,

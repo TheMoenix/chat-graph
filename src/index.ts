@@ -17,9 +17,10 @@ export type {
   StepResult,
   ActionResult,
   ValidationResult,
-  NodeDefinition,
-  JSONNode,
-  NodeConfig,
+  Node,
+  NodeAction,
+  NodeValidate,
+  ExecutableNode,
 } from './types';
 
 // Export constants

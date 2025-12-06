@@ -13,41 +13,60 @@ async function demo() {
   const flow = new Flow('onboarding', 'User Onboarding');
 
   flow
-    .addNode('greet', {
+    .addNode({
+      id: 'greet',
       action: { message: "👋 Hi! What's your name?" },
-      validate: [
-        { regex: '\\w+', errorMessage: 'Please enter a valid name.' },
-        { regex: '.{2,}', errorMessage: 'Name must be at least 2 characters.' },
-      ],
-      targetField: 'name',
+      validate: {
+        rules: [
+          { regex: '\\w+', errorMessage: 'Please enter a valid name.' },
+          {
+            regex: '.{2,}',
+            errorMessage: 'Name must be at least 2 characters.',
+          },
+        ],
+        targetField: 'name',
+      },
     })
-    .addNode('askEmail', {
+    .addNode({
+      id: 'askEmail',
       action: { message: "Nice to meet you, {name}! What's your email?" },
       validate: {
-        regex: '^\\S+@\\S+\\.\\S+$',
-        errorMessage: "That doesn't look like a valid email.",
+        rules: [
+          {
+            regex: '^\\S+@\\S+\\.\\S+$',
+            errorMessage: "That doesn't look like a valid email.",
+          },
+        ],
+        targetField: 'email',
       },
-      targetField: 'email',
     })
-    .addNode('askAge', {
+    .addNode({
+      id: 'askAge',
       action: { message: 'How old are you?' },
       validate: {
-        regex: '^\\d+$',
-        errorMessage: 'Please enter a valid age.',
+        rules: [
+          {
+            regex: '^\\d+$',
+            errorMessage: 'Please enter a valid age.',
+          },
+        ],
+        targetField: 'age',
       },
-      targetField: 'age',
     })
-    .addNode('processAge', {
+    .addNode({
+      id: 'processAge',
       action: (state: State) => {
         // Convert age to number
         state.age = parseInt(state.age);
         return { messages: [], updates: { age: state.age } };
       },
     })
-    .addNode('adult', {
+    .addNode({
+      id: 'adult',
       action: { message: "Great! You're {age}. Welcome aboard! 🎉" },
     })
-    .addNode('minor', {
+    .addNode({
+      id: 'minor',
       action: { message: "You're {age}. Sorry, you must be 18+." },
     })
     .addEdge(START, 'greet')
