@@ -1,11 +1,11 @@
-import { Flow } from '../src/flow';
+import { ChatGraph } from '../src/flow';
 import { START, END } from '../src/constants';
 import type { State, ChatEvent } from '../src/types';
 
 describe('Flow', () => {
   describe('Basic Node Operations', () => {
     it('should create a flow and add nodes', () => {
-      const flow = new Flow('test-flow');
+      const flow = new ChatGraph('test-flow');
 
       flow.addNode({
         id: 'greet',
@@ -16,7 +16,7 @@ describe('Flow', () => {
     });
 
     it('should execute a simple action node', async () => {
-      const flow = new Flow('test');
+      const flow = new ChatGraph('test');
 
       flow
         .addNode({
@@ -43,7 +43,7 @@ describe('Flow', () => {
 
   describe('Two-Phase Node Model', () => {
     it('should execute action phase first', async () => {
-      const flow = new Flow('test');
+      const flow = new ChatGraph('test');
 
       flow
         .addNode({
@@ -74,7 +74,7 @@ describe('Flow', () => {
     });
 
     it('should validate user response in second phase', async () => {
-      const flow = new Flow('test');
+      const flow = new ChatGraph('test');
 
       flow
         .addNode({
@@ -114,7 +114,7 @@ describe('Flow', () => {
     });
 
     it('should show error message on validation failure', async () => {
-      const flow = new Flow('test');
+      const flow = new ChatGraph('test');
 
       flow
         .addNode({
@@ -156,7 +156,7 @@ describe('Flow', () => {
 
   describe('Multiple Validators', () => {
     it('should run all validators in sequence', async () => {
-      const flow = new Flow('test');
+      const flow = new ChatGraph('test');
 
       flow
         .addNode({
@@ -213,7 +213,7 @@ describe('Flow', () => {
 
   describe('Template Interpolation', () => {
     it('should interpolate state variables in messages', async () => {
-      const flow = new Flow('test');
+      const flow = new ChatGraph('test');
 
       flow
         .addNode({
@@ -240,7 +240,7 @@ describe('Flow', () => {
 
   describe('Conditional Edges', () => {
     it('should route based on state conditions', async () => {
-      const flow = new Flow('test');
+      const flow = new ChatGraph('test');
 
       flow
         .addNode({
@@ -316,7 +316,7 @@ describe('Flow', () => {
 
   describe('Function-Based Nodes', () => {
     it('should support function-only nodes', async () => {
-      const flow = new Flow('test');
+      const flow = new ChatGraph('test');
 
       flow
         .addNode({
@@ -345,7 +345,7 @@ describe('Flow', () => {
     });
 
     it('should support custom validation functions', async () => {
-      const flow = new Flow('test');
+      const flow = new ChatGraph('test');
 
       flow
         .addNode({
@@ -396,7 +396,7 @@ describe('Flow', () => {
 
   describe('Flow Chaining', () => {
     it('should chain method calls fluently', () => {
-      const flow = new Flow('test');
+      const flow = new ChatGraph('test');
 
       const result = flow
         .addNode({ id: 'a', action: { message: 'A' } })

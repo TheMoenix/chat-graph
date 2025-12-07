@@ -8,7 +8,13 @@ import type {
   NodeAction,
   NodeValidate,
   ExecutableNode,
+  Flow,
+  ExtractNodeIds,
+  RouterNode,
+  EdgesMap,
 } from './types';
+
+import { START, END } from './constants';
 
 /**
  * Flow engine that executes conversation flows with two-phase nodes (action + validation)
@@ -29,99 +35,24 @@ import type {
  * const result = await flow.compile(state, event);
  * ```
  */
-export class Flow {
+export class ChatGraph<Nodes extends readonly Node[] = readonly []> {
   private readonly id: string;
   private readonly name: string;
-  private startNodeId: string;
-  private readonly nodes: Map<string, ExecutableNode> = new Map();
-  private readonly edges: Map<string, string> = new Map();
-  private readonly conditionalEdges: Map<string, (state: State) => string> =
-    new Map();
+  // private startNodeId: string;
+  private nodes: ExecutableNode[] = [];
+  private readonly edges: EdgesMap<Nodes> = new Map();
 
-  /**
-   * Creates a new Flow instance
-   *
-   * @param id - Unique identifier for the flow
-   * @param name - Human-readable name for the flow
-   */
-  constructor(id: string, name: string = 'Flow') {
-    this.id = id;
-    this.name = name;
-    this.startNodeId = '';
-  }
-
-  /**
-   * Adds a node to the flow
-   *
-   * @param id - Unique node identifier
-   * @param config - Node configuration (object with action/validate or just an action function)
-   * @returns The flow instance for chaining
-   *
-   * @example
-   * ```typescript
-   * // Simple message node with validation
-   * flow.addNode("askName", {
-   *   action: { message: "What's your name?" },
-   *   validate: { regex: "\\w+", errorMessage: "Invalid name" },
-   *   targetField: "name"
-   * });
-   *
-   * // Function-based node
-   * flow.addNode("process", (state) => ({
-   *   messages: ["Processing..."],
-   *   updates: { processed: true }
-   * }));
-   * ```
-   */
-  addNode(node: Node): this {
-    // Convert config to NodeDefinition
-    const actionFn = this.createAction(node.action);
-    const validateFn = node.validate
-      ? this.createValidate(node.validate)
-      : undefined;
-    this.nodes.set(node.id, {
-      id: node.id,
-      action: actionFn,
-      validate: validateFn,
-    });
-    return this;
-  }
-
-  /**
-   * Adds a directed edge from one node to another
-   *
-   * @param from - Source node ID or "__START__"
-   * @param to - Target node ID or "__END__"
-   * @returns The flow instance for chaining
-   */
-  addEdge(from: string | '__START__', to: string | '__END__'): this {
-    if (from === '__START__') {
-      this.startNodeId = to;
-    } else if (to === '__END__') {
-      this.edges.set(from, 'END');
-    } else {
-      this.edges.set(from, to);
+  // Implementation (must handle both)
+  constructor(config?: Flow<Nodes>) {
+    this.id = config?.id || 'flow';
+    this.name = config?.name || 'Flow';
+    if (config?.nodes) {
+      this.nodes = config.nodes as unknown as ExecutableNode[];
     }
-    return this;
-  }
-
-  /**
-   * Adds a conditional edge that routes based on state
-   *
-   * @param from - Source node ID
-   * @param router - Function that returns the target node ID based on state
-   * @returns The flow instance for chaining
-   *
-   * @example
-   * ```typescript
-   * flow.addConditionalEdge("checkAge", (state) =>
-   *   state.age >= 18 ? "adult" : "minor"
-   * );
-   * ```
-   */
-  addConditionalEdge(from: string, router: (state: State) => string): this {
-    this.conditionalEdges.set(from, router);
-    return this;
+    if (config?.edges) {
+      this.edges = config.edges;
+    }
+    // ...
   }
 
   /**
@@ -148,7 +79,7 @@ export class Flow {
       );
 
       // Check if flow is done
-      if (nextNodeId === 'END') {
+      if (nextNodeId === END) {
         return { ...result, done: true };
       }
 
@@ -176,8 +107,9 @@ export class Flow {
     state: State,
     event: ChatEvent
   ): Promise<StepResult> {
-    const currentNodeId = state.__currentNodeId || this.startNodeId;
-    const node = this.nodes.get(currentNodeId);
+    const currentNodeId =
+      state.__currentNodeId || this.getNextNode(START, state);
+    const node = this.nodes.find((n) => n.id === currentNodeId);
     const results: StepResult = { state, messages: [], done: false };
 
     if (!node) {
@@ -232,14 +164,67 @@ export class Flow {
   /**
    * Determines the next node based on edges and conditional routing
    */
-  private getNextNode(nodeId: string, state: State): string {
-    if (this.conditionalEdges.has(nodeId)) {
-      return this.conditionalEdges.get(nodeId)!(state);
-    }
+  private getNextNode(
+    nodeId: ExtractNodeIds<Nodes>,
+    state: State
+  ): ExtractNodeIds<Nodes> | typeof END {
     if (this.edges.has(nodeId)) {
-      return this.edges.get(nodeId)!;
+      const to = this.edges.get(nodeId)!;
+      if (typeof to === 'function') {
+        return to(state) as ExtractNodeIds<Nodes> | typeof END;
+      } else {
+        return to;
+      }
     }
-    return 'END';
+    return END;
+  }
+}
+
+class ChatGraphBuilder<Nodes extends readonly Node[] = readonly []> {
+  private readonly nodes: Node[] = [];
+  private readonly edges: Map<
+    string | typeof START,
+    string | Function | typeof END
+  > = new Map();
+
+  addNode<const NewNode extends Node>(
+    node: NewNode
+  ): ChatGraphBuilder<readonly [...Nodes, NewNode]> {
+    // Convert config to NodeDefinition
+    const actionFn = this.createAction(node.action);
+    const validateFn = node.validate
+      ? this.createValidate(node.validate)
+      : undefined;
+    this.nodes.push({
+      id: node.id,
+      action: actionFn,
+      validate: validateFn,
+    });
+    return this as any; // Type assertion needed
+  }
+
+  /**
+   * Adds a directed edge from one node to another
+   *
+   * @param from - Source node ID or "__START__"
+   * @param to - Target node ID or "__END__"
+   * @returns The flow instance for chaining
+   */
+  addEdge(
+    from: ExtractNodeIds<Nodes> | typeof START,
+    to: ExtractNodeIds<Nodes> | RouterNode<Nodes> | typeof END
+  ): this {
+    this.edges.set(from, to);
+    return this;
+  }
+
+  build(config: { id: string; name: string }): ChatGraph<Nodes> {
+    // Convert to final ChatGraph
+    return new ChatGraph({
+      ...config,
+      nodes: this.nodes as unknown as Nodes, // TODO fix this cast
+      edges: this.edges as EdgesMap<Nodes>,
+    }) as ChatGraph<Nodes>;
   }
 
   /**
@@ -317,4 +302,9 @@ export class Flow {
   private interpolate(text: string, state: State): string {
     return text.replace(/\{(\w+)\}/g, (_, key) => state[key] || '');
   }
+}
+
+// Helper function
+export function createGraph() {
+  return new ChatGraphBuilder();
 }

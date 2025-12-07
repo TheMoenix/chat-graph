@@ -1,3 +1,5 @@
+import { START, END } from './constants';
+
 /**
  * Represents the state of a conversation flow
  */
@@ -108,3 +110,33 @@ export type ExecutableNode = {
   /** This is for validating the user input and is it sufficient to wrap this node and move to the next node, like if the user answered the question correctly or in the accepted format */
   validate?: ExecutableNodeValidate | null;
 };
+
+export type ExtractNodeIds<Nodes extends readonly Node[]> = Nodes[number]['id'];
+
+export type RouterNode<Nodes extends readonly Node[]> = (
+  state: State
+) => Nodes[number]['id'] | typeof END;
+
+export type EdgesMap<Nodes extends readonly Node[]> = Map<
+  ExtractNodeIds<Nodes> | typeof START,
+  ExtractNodeIds<Nodes> | RouterNode<Nodes> | typeof END
+>;
+
+export type Flow<Nodes extends readonly Node[]> = {
+  id: string;
+  name: string;
+  nodes: Nodes;
+  edges: EdgesMap<Nodes>;
+};
+
+type HasDuplicates<
+  Arr extends readonly string[],
+  Seen extends string = never,
+> = Arr extends readonly [
+  infer First extends string,
+  ...infer Rest extends readonly string[],
+]
+  ? First extends Seen
+    ? true // Found duplicate!
+    : HasDuplicates<Rest, Seen | First>
+  : false;

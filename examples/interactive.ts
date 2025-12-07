@@ -1,7 +1,7 @@
 import * as readline from 'readline';
-import { Flow } from '../src/flow';
-import { START, END } from '../src/constants';
 import type { State, StepResult } from '../src/types';
+import { createGraph } from '../src/flow';
+import { END, START } from '../src';
 
 /**
  * Interactive demo of the chat flow engine
@@ -9,75 +9,37 @@ import type { State, StepResult } from '../src/types';
  */
 async function demo() {
   console.log('=== Chat Flow Interactive Demo ===\n');
-
-  const flow = new Flow('onboarding', 'User Onboarding');
-
-  flow
+  const flow = createGraph()
     .addNode({
       id: 'greet',
-      action: { message: "👋 Hi! What's your name?" },
+      action: { message: "Hi! What's your name?" },
       validate: {
-        rules: [
-          { regex: '\\w+', errorMessage: 'Please enter a valid name.' },
-          {
-            regex: '.{2,}',
-            errorMessage: 'Name must be at least 2 characters.',
-          },
-        ],
+        rules: [{ regex: '\\w+', errorMessage: 'Please enter a valid name.' }],
         targetField: 'name',
       },
+      sdf: 'Sdf',
     })
     .addNode({
-      id: 'askEmail',
-      action: { message: "Nice to meet you, {name}! What's your email?" },
+      id: 'ask_email',
+      action: (state, e) => {
+        return {
+          messages: [`Nice to meet you, ${state.name}! What's your email?`],
+        };
+      },
       validate: {
         rules: [
           {
-            regex: '^\\S+@\\S+\\.\\S+$',
-            errorMessage: "That doesn't look like a valid email.",
+            regex: '\\S+@\\S+\\.\\S+',
+            errorMessage: 'Please enter a valid email.',
           },
         ],
         targetField: 'email',
       },
     })
-    .addNode({
-      id: 'askAge',
-      action: { message: 'How old are you?' },
-      validate: {
-        rules: [
-          {
-            regex: '^\\d+$',
-            errorMessage: 'Please enter a valid age.',
-          },
-        ],
-        targetField: 'age',
-      },
-    })
-    .addNode({
-      id: 'processAge',
-      action: (state: State) => {
-        // Convert age to number
-        state.age = parseInt(state.age);
-        return { messages: [], updates: { age: state.age } };
-      },
-    })
-    .addNode({
-      id: 'adult',
-      action: { message: "Great! You're {age}. Welcome aboard! 🎉" },
-    })
-    .addNode({
-      id: 'minor',
-      action: { message: "You're {age}. Sorry, you must be 18+." },
-    })
     .addEdge(START, 'greet')
-    .addEdge('greet', 'askEmail')
-    .addEdge('askEmail', 'askAge')
-    .addEdge('askAge', 'processAge')
-    .addConditionalEdge('processAge', (state: State) => {
-      return state.age >= 18 ? 'adult' : 'minor';
-    })
-    .addEdge('adult', END)
-    .addEdge('minor', END);
+    .addEdge('greet', 'ask_email')
+    .addEdge('ask_email', END)
+    .build({ id: 'onboarding', name: 'User Onboarding' });
 
   // Create readline interface
   const rl = readline.createInterface({

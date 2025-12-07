@@ -8,7 +8,7 @@
  */
 
 // Export the Flow class
-export { Flow } from './flow';
+export { ChatGraph as Flow } from './flow';
 
 // Export all types
 export type {
