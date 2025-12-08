@@ -1,30 +1,29 @@
-import { ChatGraph } from '../src/flow';
+import { createGraph } from '../src/graph';
 import { START, END } from '../src/constants';
 import type { State, ChatEvent } from '../src/types';
 
 describe('Flow', () => {
   describe('Basic Node Operations', () => {
     it('should create a flow and add nodes', () => {
-      const flow = new ChatGraph('test-flow');
-
-      flow.addNode({
-        id: 'greet',
-        action: { message: 'Hello!' },
-      });
+      const flow = createGraph()
+        .addNode({
+          id: 'greet',
+          action: { message: 'Hello!' },
+        })
+        .build({ id: 'test-flow', name: 'Test Flow' });
 
       expect(flow).toBeDefined();
     });
 
     it('should execute a simple action node', async () => {
-      const flow = new ChatGraph('test');
-
-      flow
+      const flow = createGraph()
         .addNode({
           id: 'greet',
           action: { message: 'Hello!' },
         })
         .addEdge(START, 'greet')
-        .addEdge('greet', END);
+        .addEdge('greet', END)
+        .build({ id: 'test', name: 'Test' });
 
       const state: State = {
         __currentNodeId: '',
@@ -43,9 +42,7 @@ describe('Flow', () => {
 
   describe('Two-Phase Node Model', () => {
     it('should execute action phase first', async () => {
-      const flow = new ChatGraph('test');
-
-      flow
+      const flow = createGraph()
         .addNode({
           id: 'askName',
           action: { message: 'What is your name?' },
@@ -55,7 +52,8 @@ describe('Flow', () => {
           },
         })
         .addEdge(START, 'askName')
-        .addEdge('askName', END);
+        .addEdge('askName', END)
+        .build({ id: 'test', name: 'Test' });
 
       const state: State = {
         __currentNodeId: '',
@@ -74,9 +72,7 @@ describe('Flow', () => {
     });
 
     it('should validate user response in second phase', async () => {
-      const flow = new ChatGraph('test');
-
-      flow
+      const flow = createGraph()
         .addNode({
           id: 'askName',
           action: { message: 'What is your name?' },
@@ -86,7 +82,8 @@ describe('Flow', () => {
           },
         })
         .addEdge(START, 'askName')
-        .addEdge('askName', END);
+        .addEdge('askName', END)
+        .build({ id: 'test', name: 'Test' });
 
       // First: action phase
       const state: State = {
@@ -114,9 +111,7 @@ describe('Flow', () => {
     });
 
     it('should show error message on validation failure', async () => {
-      const flow = new ChatGraph('test');
-
-      flow
+      const flow = createGraph()
         .addNode({
           id: 'askEmail',
           action: { message: 'Enter email:' },
@@ -128,7 +123,8 @@ describe('Flow', () => {
           },
         })
         .addEdge(START, 'askEmail')
-        .addEdge('askEmail', END);
+        .addEdge('askEmail', END)
+        .build({ id: 'test', name: 'Test' });
 
       // Action phase
       const state: State = {
@@ -156,9 +152,7 @@ describe('Flow', () => {
 
   describe('Multiple Validators', () => {
     it('should run all validators in sequence', async () => {
-      const flow = new ChatGraph('test');
-
-      flow
+      const flow = createGraph()
         .addNode({
           id: 'askName',
           action: { message: 'Name?' },
@@ -171,7 +165,8 @@ describe('Flow', () => {
           },
         })
         .addEdge(START, 'askName')
-        .addEdge('askName', END);
+        .addEdge('askName', END)
+        .build({ id: 'test', name: 'Test' });
 
       const state: State = {
         __currentNodeId: '',
@@ -213,15 +208,14 @@ describe('Flow', () => {
 
   describe('Template Interpolation', () => {
     it('should interpolate state variables in messages', async () => {
-      const flow = new ChatGraph('test');
-
-      flow
+      const flow = createGraph()
         .addNode({
           id: 'greet',
           action: { message: 'Hello, {name}!' },
         })
         .addEdge(START, 'greet')
-        .addEdge('greet', END);
+        .addEdge('greet', END)
+        .build({ id: 'test', name: 'Test' });
 
       const state: State = {
         __currentNodeId: '',
@@ -240,9 +234,7 @@ describe('Flow', () => {
 
   describe('Conditional Edges', () => {
     it('should route based on state conditions', async () => {
-      const flow = new ChatGraph('test');
-
-      flow
+      const flow = createGraph()
         .addNode({
           id: 'askAge',
           action: { message: 'Age?' },
@@ -253,7 +245,7 @@ describe('Flow', () => {
         })
         .addNode({
           id: 'convertAge',
-          action: (state) => ({
+          action: (state: State) => ({
             messages: [],
             updates: { age: parseInt(state.age) },
           }),
@@ -268,11 +260,12 @@ describe('Flow', () => {
         })
         .addEdge(START, 'askAge')
         .addEdge('askAge', 'convertAge')
-        .addConditionalEdge('convertAge', (state) =>
+        .addEdge('convertAge', (state: State) =>
           state.age >= 18 ? 'adult' : 'minor'
         )
         .addEdge('adult', END)
-        .addEdge('minor', END);
+        .addEdge('minor', END)
+        .build({ id: 'test', name: 'Test' });
 
       // Test adult path
       let state: State = {
@@ -316,18 +309,17 @@ describe('Flow', () => {
 
   describe('Function-Based Nodes', () => {
     it('should support function-only nodes', async () => {
-      const flow = new ChatGraph('test');
-
-      flow
+      const flow = createGraph()
         .addNode({
           id: 'process',
-          action: async (state, event) => ({
+          action: async (state: State, event: ChatEvent) => ({
             messages: ['Processing...'],
             updates: { processed: true },
           }),
         })
         .addEdge(START, 'process')
-        .addEdge('process', END);
+        .addEdge('process', END)
+        .build({ id: 'test', name: 'Test' });
 
       const state: State = {
         __currentNodeId: '',
@@ -345,13 +337,11 @@ describe('Flow', () => {
     });
 
     it('should support custom validation functions', async () => {
-      const flow = new ChatGraph('test');
-
-      flow
+      const flow = createGraph()
         .addNode({
           id: 'custom',
           action: { message: 'Enter code:' },
-          validate: async (state, event) => {
+          validate: async (state: State, event: ChatEvent) => {
             const isValid = event.payload === 'SECRET';
             return {
               isValid,
@@ -361,7 +351,8 @@ describe('Flow', () => {
           },
         })
         .addEdge(START, 'custom')
-        .addEdge('custom', END);
+        .addEdge('custom', END)
+        .build({ id: 'test', name: 'Test' });
 
       const state: State = {
         __currentNodeId: '',
@@ -396,16 +387,16 @@ describe('Flow', () => {
 
   describe('Flow Chaining', () => {
     it('should chain method calls fluently', () => {
-      const flow = new ChatGraph('test');
+      const builder = createGraph();
 
-      const result = flow
+      const result = builder
         .addNode({ id: 'a', action: { message: 'A' } })
         .addNode({ id: 'b', action: { message: 'B' } })
         .addEdge(START, 'a')
         .addEdge('a', 'b')
         .addEdge('b', END);
 
-      expect(result).toBe(flow);
+      expect(result).toBe(builder);
     });
   });
 });

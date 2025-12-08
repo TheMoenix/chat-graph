@@ -7,8 +7,8 @@
  * @packageDocumentation
  */
 
-// Export the Flow class
-export { ChatGraph as Flow } from './graph';
+// Export the Flow class and builder
+export { ChatGraph as Flow, createGraph } from './graph';
 
 // Export all types
 export type {

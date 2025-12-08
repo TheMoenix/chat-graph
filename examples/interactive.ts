@@ -1,6 +1,6 @@
 import * as readline from 'readline';
 import type { State, StepResult } from '../src/types';
-import { ChatGraph, createGraph } from '../src/graph';
+import { createGraph } from '../src/graph';
 import { END, START } from '../src';
 
 /**
@@ -9,6 +9,8 @@ import { END, START } from '../src';
  */
 async function demo() {
   console.log('=== Chat Flow Interactive Demo ===\n');
+
+  // Using the builder pattern (recommended for type safety)
   const flow = createGraph()
     .addNode({
       id: 'greet',
@@ -17,11 +19,10 @@ async function demo() {
         rules: [{ regex: '\\w+', errorMessage: 'Please enter a valid name.' }],
         targetField: 'name',
       },
-      sdf: 'Sdf',
     })
     .addNode({
       id: 'ask_email',
-      action: (state, e) => {
+      action: (state: State) => {
         return {
           messages: [`Nice to meet you, ${state.name}! What's your email?`],
         };

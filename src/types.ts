@@ -82,7 +82,7 @@ export type NodeValidate =
       event: ChatEvent
     ) => ValidationResult | Promise<ValidationResult>)
   | {
-      rules: { regex: string; errorMessage: string }[];
+      rules: readonly { regex: string; errorMessage: string }[];
       /** Field name to store validated input in state */
       targetField?: string | null;
     };

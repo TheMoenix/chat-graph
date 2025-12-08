@@ -8,6 +8,8 @@ import type {
   NodeAction,
   NodeValidate,
   ExecutableNode,
+  ExecutableNodeAction,
+  ExecutableNodeValidate,
   Flow,
   ExtractNodeIds,
   RouterNode,
@@ -38,21 +40,95 @@ import { START, END } from './constants';
 export class ChatGraph<Nodes extends readonly Node[] = readonly []> {
   private readonly id: string;
   private readonly name: string;
-  // private startNodeId: string;
   private nodes: ExecutableNode[] = [];
   private readonly edges: EdgesMap<Nodes> = new Map();
 
-  // Implementation (must handle both)
-  constructor(config?: Flow<Nodes>) {
-    this.id = config?.id || 'flow';
-    this.name = config?.name || 'Flow';
-    if (config?.nodes) {
-      this.nodes = config.nodes as unknown as ExecutableNode[];
-    }
-    if (config?.edges) {
+  constructor(config: Flow<Nodes>) {
+    this.id = config.id;
+    this.name = config.name;
+
+    // Convert Node[] to ExecutableNode[] by processing actions and validations
+    this.nodes = this.processNodes(config.nodes);
+
+    if (config.edges) {
       this.edges = config.edges;
     }
-    // ...
+  }
+
+  /**
+   * Processes nodes to convert config-based definitions to executable functions
+   */
+  private processNodes(nodes: readonly Node[]): ExecutableNode[] {
+    return nodes.map((node) => ({
+      id: node.id,
+      action: this.createAction(node.action),
+      validate: node.validate ? this.createValidate(node.validate) : undefined,
+    }));
+  }
+
+  /**
+   * Creates an action function from config
+   */
+  private createAction(action: NodeAction): ExecutableNodeAction {
+    if (typeof action === 'function') {
+      return action;
+    }
+
+    // Simple message object
+    return (state: State) => ({
+      messages: [this.interpolate(action.message, state)],
+    });
+  }
+
+  /**
+   * Creates a validation function from config
+   */
+  private createValidate(validate: NodeValidate): ExecutableNodeValidate {
+    if (typeof validate === 'function') {
+      return validate;
+    }
+
+    // Array of validators (run all in sequence)
+    const rules = Array.isArray(validate.rules)
+      ? validate.rules
+      : [validate.rules];
+
+    return (state: State, event: ChatEvent): ValidationResult => {
+      if (event.type !== 'user_message') {
+        return { isValid: false };
+      }
+
+      const input = event.payload;
+
+      // Run all validators
+      for (const validator of rules) {
+        const regex = new RegExp(validator.regex);
+        if (!regex.test(input)) {
+          return {
+            isValid: false,
+            errorMessage: validator.errorMessage,
+          };
+        }
+      }
+
+      // All passed - save to targetField if specified
+      const updates =
+        validate && 'targetField' in validate && validate.targetField
+          ? { [validate.targetField]: input }
+          : {};
+
+      return {
+        isValid: true,
+        updates,
+      };
+    };
+  }
+
+  /**
+   * Interpolates variables in text using {key} syntax
+   */
+  private interpolate(text: string, state: State): string {
+    return text.replace(/\{(\w+)\}/g, (_, key) => state[key] || '');
   }
 
   /**
@@ -190,17 +266,9 @@ class ChatGraphBuilder<Nodes extends readonly Node[] = readonly []> {
   addNode<const NewNode extends Node>(
     node: NewNode
   ): ChatGraphBuilder<readonly [...Nodes, NewNode]> {
-    // Convert config to NodeDefinition
-    const actionFn = this.createAction(node.action);
-    const validateFn = node.validate
-      ? this.createValidate(node.validate)
-      : undefined;
-    this.nodes.push({
-      id: node.id,
-      action: actionFn,
-      validate: validateFn,
-    });
-    return this as any; // Type assertion needed
+    // Store node as-is; ChatGraph will process it
+    this.nodes.push(node);
+    return this as any; // Type assertion needed for generics accumulation
   }
 
   /**
@@ -219,88 +287,12 @@ class ChatGraphBuilder<Nodes extends readonly Node[] = readonly []> {
   }
 
   build(config: { id: string; name: string }): ChatGraph<Nodes> {
-    // Convert to final ChatGraph
+    // Convert to final ChatGraph with proper typing
     return new ChatGraph({
       ...config,
-      nodes: this.nodes as unknown as Nodes, // TODO fix this cast
+      nodes: this.nodes as unknown as Nodes,
       edges: this.edges as EdgesMap<Nodes>,
-    }) as ChatGraph<Nodes>;
-  }
-
-  /**
-   * Creates an action function from config
-   */
-  private createAction(
-    action: NodeAction
-  ): (state: State, event: ChatEvent) => ActionResult | Promise<ActionResult> {
-    if (typeof action === 'function') {
-      return action;
-    }
-
-    // Simple message object
-    return (state: State) => ({
-      messages: [this.interpolate(action.message, state)],
     });
-  }
-
-  /**
-   * Creates a validation function from config
-   */
-  private createValidate(
-    validate: NodeValidate | null
-  ): (
-    state: State,
-    event: ChatEvent
-  ) => ValidationResult | Promise<ValidationResult> {
-    if (!validate) {
-      return () => ({ isValid: true });
-    }
-
-    if (typeof validate === 'function') {
-      return validate;
-    }
-
-    // Array of validators (run all in sequence)
-    const rules = Array.isArray(validate.rules)
-      ? validate.rules
-      : [validate.rules];
-
-    return (state: State, event: ChatEvent): ValidationResult => {
-      if (event.type !== 'user_message') {
-        return { isValid: false };
-      }
-
-      const input = event.payload;
-
-      // Run all validators
-      for (const validator of rules) {
-        const regex = new RegExp(validator.regex);
-        if (!regex.test(input)) {
-          return {
-            isValid: false,
-            errorMessage: validator.errorMessage,
-          };
-        }
-      }
-
-      // All passed - save to targetField if specified
-      const updates =
-        validate && 'targetField' in validate && validate.targetField
-          ? { [validate.targetField]: input }
-          : {};
-
-      return {
-        isValid: true,
-        updates,
-      };
-    };
-  }
-
-  /**
-   * Interpolates variables in text using {key} syntax
-   */
-  private interpolate(text: string, state: State): string {
-    return text.replace(/\{(\w+)\}/g, (_, key) => state[key] || '');
   }
 }
 

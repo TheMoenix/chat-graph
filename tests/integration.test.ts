@@ -1,12 +1,10 @@
-import { Flow, START, END } from '../src';
+import { createGraph, START, END } from '../src';
 import type { State } from '../src';
 
 describe('Integration Tests', () => {
   describe('Complete Onboarding Flow', () => {
     it('should complete full onboarding conversation', async () => {
-      const flow = new Flow('onboarding');
-
-      flow
+      const flow = createGraph()
         .addNode({
           id: 'greet',
           action: { message: "Hi! What's your name?" },
@@ -38,7 +36,7 @@ describe('Integration Tests', () => {
         })
         .addNode({
           id: 'processAge',
-          action: (state) => ({
+          action: (state: State) => ({
             messages: [],
             updates: { age: parseInt(state.age) },
           }),
@@ -55,11 +53,12 @@ describe('Integration Tests', () => {
         .addEdge('greet', 'askEmail')
         .addEdge('askEmail', 'askAge')
         .addEdge('askAge', 'processAge')
-        .addConditionalEdge('processAge', (state) =>
+        .addEdge('processAge', (state: State) =>
           state.age >= 18 ? 'adult' : 'minor'
         )
         .addEdge('adult', END)
-        .addEdge('minor', END);
+        .addEdge('minor', END)
+        .build({ id: 'onboarding', name: 'Onboarding Flow' });
 
       const state: State = {
         __currentNodeId: '',
@@ -130,9 +129,7 @@ describe('Integration Tests', () => {
     });
 
     it('should handle minor path correctly', async () => {
-      const flow = new Flow('age-check');
-
-      flow
+      const flow = createGraph()
         .addNode({
           id: 'askAge',
           action: { message: 'Age?' },
@@ -143,7 +140,7 @@ describe('Integration Tests', () => {
         })
         .addNode({
           id: 'convert',
-          action: (state) => ({
+          action: (state: State) => ({
             messages: [],
             updates: { age: parseInt(state.age) },
           }),
@@ -152,17 +149,18 @@ describe('Integration Tests', () => {
           id: 'minor',
           action: { message: 'Under 18: {age}' },
         })
-        .addEdge(START, 'askAge')
-        .addEdge('askAge', 'convert')
-        .addConditionalEdge('convert', (state) =>
-          state.age >= 18 ? 'adult' : 'minor'
-        )
         .addNode({
           id: 'adult',
           action: { message: 'Over 18: {age}' },
         })
+        .addEdge(START, 'askAge')
+        .addEdge('askAge', 'convert')
+        .addEdge('convert', (state: State) =>
+          state.age >= 18 ? 'adult' : 'minor'
+        )
         .addEdge('adult', END)
-        .addEdge('minor', END);
+        .addEdge('minor', END)
+        .build({ id: 'age-check', name: 'Age Check' });
 
       const state: State = {
         __currentNodeId: '',
@@ -186,9 +184,7 @@ describe('Integration Tests', () => {
 
   describe('Complex Branching', () => {
     it('should handle multiple conditional branches', async () => {
-      const flow = new Flow('quiz');
-
-      flow
+      const flow = createGraph()
         .addNode({
           id: 'askScore',
           action: { message: 'Enter score (0-100):' },
@@ -199,7 +195,7 @@ describe('Integration Tests', () => {
         })
         .addNode({
           id: 'convert',
-          action: (state) => ({
+          action: (state: State) => ({
             messages: [],
             updates: { score: parseInt(state.score) },
           }),
@@ -218,7 +214,7 @@ describe('Integration Tests', () => {
         })
         .addEdge(START, 'askScore')
         .addEdge('askScore', 'convert')
-        .addConditionalEdge('convert', (state) => {
+        .addEdge('convert', (state: State) => {
           if (state.score >= 90) {
             return 'excellent';
           }
@@ -229,7 +225,8 @@ describe('Integration Tests', () => {
         })
         .addEdge('excellent', END)
         .addEdge('good', END)
-        .addEdge('fail', END);
+        .addEdge('fail', END)
+        .build({ id: 'quiz', name: 'Quiz' });
 
       // Test excellent path
       let state: State = { __currentNodeId: '', __flowId: 'quiz' };
@@ -265,9 +262,7 @@ describe('Integration Tests', () => {
 
   describe('State Persistence', () => {
     it('should maintain state across multiple steps', async () => {
-      const flow = new Flow('survey');
-
-      flow
+      const flow = createGraph()
         .addNode({
           id: 'q1',
           action: { message: 'Question 1?' },
@@ -291,7 +286,8 @@ describe('Integration Tests', () => {
         .addEdge(START, 'q1')
         .addEdge('q1', 'q2')
         .addEdge('q2', 'summary')
-        .addEdge('summary', END);
+        .addEdge('summary', END)
+        .build({ id: 'survey', name: 'Survey' });
 
       const state: State = { __currentNodeId: '', __flowId: 'survey' };
 
