@@ -1,14 +1,14 @@
 {
   "name": "chat-graph",
-  "version": "0.1.1",
-  "description": "A conversational flow engine with two-phase nodes (action + validation) and support for both JSON configuration and function-based definitions",
+  "version": "0.1.2",
+  "description": "A code-first chat flow engine to handle chatbot conversations using a graph structure with action and validation phases",
   "keywords": [
+    "chatgraph",
     "chat",
+    "graph",
+    "chatbot",
     "flow",
     "conversational",
-    "chatbot",
-    "workflow",
-    "state-machine",
     "typescript"
   ],
   "author": "TheMoenix",

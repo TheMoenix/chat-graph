@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2025-12-08
+
+### Changed
+
+- Refactored node and edge types for improved flexibility and clarity
+- Renamed Flow to Graph (ChatGraph) for better semantic clarity
+- Split Flow into 2 classes for better implementation with generics
+- Improved type safety to avoid casting at user end
+- package.json keywords and description updated
+- README updated to reflect changes
+
+### Added
+
+- Function-based flow creation with `createGraph()` builder API
+- JSON-based flow configuration support
+
 ## [0.1.1] - 2025-12-06
 
 ### Changed
