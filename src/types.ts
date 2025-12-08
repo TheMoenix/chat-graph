@@ -22,8 +22,7 @@ export type State = {
  * Event representing user input or system triggers
  */
 export type ChatEvent = {
-  type: 'user_message';
-  payload: any;
+  user_message: string;
 };
 
 /**

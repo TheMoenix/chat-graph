@@ -228,23 +228,20 @@ async function demo() {
   };
 
   const result = await functionBasedFlow.compile(state, {
-    type: 'user_message',
-    payload: 'John',
+    user_message: 'John',
   });
 
   console.log('Function-based result:', result);
 
   const result2 = await jsonBasedFlow.compile(state, {
-    type: 'user_message',
-    payload: 'Jane',
+    user_message: 'Jane',
   });
 
   console.log('JSON-based result:', result2);
 
   const dynamicFlow = createDynamicFlow('advanced');
   const result3 = await dynamicFlow.compile(state, {
-    type: 'user_message',
-    payload: 'test',
+    user_message: 'test',
   });
 
   console.log('Dynamic flow result:', result3);

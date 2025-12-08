@@ -94,11 +94,11 @@ export class ChatGraph<Nodes extends readonly Node[] = readonly []> {
       : [validate.rules];
 
     return (state: State, event: ChatEvent): ValidationResult => {
-      if (event.type !== 'user_message') {
+      if (!event.user_message) {
         return { isValid: false };
       }
 
-      const input = event.payload;
+      const input = event.user_message;
 
       // Run all validators
       for (const validator of rules) {

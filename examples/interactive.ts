@@ -76,8 +76,7 @@ async function demo() {
     const userInput = await askUser('You: ');
 
     result = await flow.compile(state, {
-      type: 'user_message',
-      payload: userInput,
+      user_message: userInput,
     });
 
     // Display bot messages

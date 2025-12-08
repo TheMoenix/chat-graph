@@ -31,8 +31,7 @@ describe('Flow', () => {
       };
 
       const result = await flow.compile(state, {
-        type: 'user_message',
-        payload: 'hi',
+        user_message: 'hi',
       });
 
       expect(result.messages).toContain('Hello!');
@@ -61,8 +60,7 @@ describe('Flow', () => {
       };
 
       const result = await flow.compile(state, {
-        type: 'user_message',
-        payload: '',
+        user_message: '',
       });
 
       expect(result.messages).toContain('What is your name?');
@@ -92,8 +90,7 @@ describe('Flow', () => {
       };
 
       let result = await flow.compile(state, {
-        type: 'user_message',
-        payload: '',
+        user_message: '',
       });
 
       expect(result.state.__isActionTaken).toBe(true);
@@ -101,8 +98,7 @@ describe('Flow', () => {
 
       // Second: validation phase
       result = await flow.compile(result.state, {
-        type: 'user_message',
-        payload: 'John',
+        user_message: 'John',
       });
 
       expect(result.state.__isResponseValid).toBe(true);
@@ -133,14 +129,12 @@ describe('Flow', () => {
       };
 
       let result = await flow.compile(state, {
-        type: 'user_message',
-        payload: '',
+        user_message: '',
       });
 
       // Invalid validation
       result = await flow.compile(result.state, {
-        type: 'user_message',
-        payload: 'notanemail',
+        user_message: 'notanemail',
       });
 
       expect(result.messages).toContain('Invalid email');
@@ -175,30 +169,26 @@ describe('Flow', () => {
 
       // Action
       let result = await flow.compile(state, {
-        type: 'user_message',
-        payload: '',
+        user_message: '',
       });
 
       // Fail first validator
       result = await flow.compile(result.state, {
-        type: 'user_message',
-        payload: '',
+        user_message: '',
       });
 
       expect(result.messages).toContain('Name required');
 
       // Fail second validator
       result = await flow.compile(result.state, {
-        type: 'user_message',
-        payload: 'A',
+        user_message: 'A',
       });
 
       expect(result.messages).toContain('Min 2 chars');
 
       // Pass all validators
       result = await flow.compile(result.state, {
-        type: 'user_message',
-        payload: 'John',
+        user_message: 'John',
       });
 
       expect(result.state.name).toBe('John');
@@ -224,8 +214,7 @@ describe('Flow', () => {
       };
 
       const result = await flow.compile(state, {
-        type: 'user_message',
-        payload: '',
+        user_message: '',
       });
 
       expect(result.messages).toContain('Hello, Alice!');
@@ -274,13 +263,11 @@ describe('Flow', () => {
       };
 
       let result = await flow.compile(state, {
-        type: 'user_message',
-        payload: '',
+        user_message: '',
       });
 
       result = await flow.compile(result.state, {
-        type: 'user_message',
-        payload: '25',
+        user_message: '25',
       });
 
       expect(result.messages).toContain('You are 25+');
@@ -293,13 +280,11 @@ describe('Flow', () => {
       };
 
       result = await flow.compile(state, {
-        type: 'user_message',
-        payload: '',
+        user_message: '',
       });
 
       result = await flow.compile(result.state, {
-        type: 'user_message',
-        payload: '16',
+        user_message: '16',
       });
 
       expect(result.messages).toContain('Under 18');
@@ -327,8 +312,7 @@ describe('Flow', () => {
       };
 
       const result = await flow.compile(state, {
-        type: 'user_message',
-        payload: '',
+        user_message: '',
       });
 
       expect(result.messages).toContain('Processing...');
@@ -342,11 +326,11 @@ describe('Flow', () => {
           id: 'custom',
           action: { message: 'Enter code:' },
           validate: async (state: State, event: ChatEvent) => {
-            const isValid = event.payload === 'SECRET';
+            const isValid = event.user_message === 'SECRET';
             return {
               isValid,
               errorMessage: isValid ? undefined : 'Wrong code',
-              updates: isValid ? { code: event.payload } : {},
+              updates: isValid ? { code: event.user_message } : {},
             };
           },
         })
@@ -361,14 +345,12 @@ describe('Flow', () => {
 
       // Action
       let result = await flow.compile(state, {
-        type: 'user_message',
-        payload: '',
+        user_message: '',
       });
 
       // Invalid
       result = await flow.compile(result.state, {
-        type: 'user_message',
-        payload: 'WRONG',
+        user_message: 'WRONG',
       });
 
       expect(result.messages).toContain('Wrong code');
@@ -376,8 +358,7 @@ describe('Flow', () => {
 
       // Valid
       result = await flow.compile(result.state, {
-        type: 'user_message',
-        payload: 'SECRET',
+        user_message: 'SECRET',
       });
 
       expect(result.state.code).toBe('SECRET');

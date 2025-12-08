@@ -67,8 +67,7 @@ describe('Integration Tests', () => {
 
       // Step 1: Greet action
       let result = await flow.compile(state, {
-        type: 'user_message',
-        payload: '',
+        user_message: '',
       });
 
       expect(result.messages).toContain("Hi! What's your name?");
@@ -76,8 +75,7 @@ describe('Integration Tests', () => {
 
       // Step 2: Name validation (fail)
       result = await flow.compile(result.state, {
-        type: 'user_message',
-        payload: 'A',
+        user_message: 'A',
       });
 
       expect(result.messages).toContain('Min 2 chars');
@@ -85,8 +83,7 @@ describe('Integration Tests', () => {
 
       // Step 3: Name validation (success) - should auto-progress to email
       result = await flow.compile(result.state, {
-        type: 'user_message',
-        payload: 'Alice',
+        user_message: 'Alice',
       });
 
       expect(result.state.name).toBe('Alice');
@@ -95,8 +92,7 @@ describe('Integration Tests', () => {
 
       // Step 4: Email validation (fail)
       result = await flow.compile(result.state, {
-        type: 'user_message',
-        payload: 'notanemail',
+        user_message: 'notanemail',
       });
 
       expect(result.messages).toContain('Invalid email');
@@ -104,8 +100,7 @@ describe('Integration Tests', () => {
 
       // Step 5: Email validation (success) - should auto-progress to age
       result = await flow.compile(result.state, {
-        type: 'user_message',
-        payload: 'alice@example.com',
+        user_message: 'alice@example.com',
       });
 
       expect(result.state.email).toBe('alice@example.com');
@@ -114,8 +109,7 @@ describe('Integration Tests', () => {
 
       // Step 6: Age validation (success) - should complete flow
       result = await flow.compile(result.state, {
-        type: 'user_message',
-        payload: '25',
+        user_message: '25',
       });
 
       expect(result.state.age).toBe(25);
@@ -168,13 +162,11 @@ describe('Integration Tests', () => {
       };
 
       let result = await flow.compile(state, {
-        type: 'user_message',
-        payload: '',
+        user_message: '',
       });
 
       result = await flow.compile(result.state, {
-        type: 'user_message',
-        payload: '16',
+        user_message: '16',
       });
 
       expect(result.messages).toContain('Under 18: 16');
@@ -231,30 +223,30 @@ describe('Integration Tests', () => {
       // Test excellent path
       let state: State = { __currentNodeId: '', __flowId: 'quiz' };
       let result = await flow.compile(state, {
-        type: 'user_message',
-        payload: '',
+        user_message: '',
       });
       result = await flow.compile(result.state, {
-        type: 'user_message',
-        payload: '95',
+        user_message: '95',
       });
       expect(result.messages).toContain('Excellent! 95%');
 
       // Test good path
       state = { __currentNodeId: '', __flowId: 'quiz' };
-      result = await flow.compile(state, { type: 'user_message', payload: '' });
+      result = await flow.compile(state, {
+        user_message: '',
+      });
       result = await flow.compile(result.state, {
-        type: 'user_message',
-        payload: '75',
+        user_message: '75',
       });
       expect(result.messages).toContain('Good job! 75%');
 
       // Test fail path
       state = { __currentNodeId: '', __flowId: 'quiz' };
-      result = await flow.compile(state, { type: 'user_message', payload: '' });
+      result = await flow.compile(state, {
+        user_message: '',
+      });
       result = await flow.compile(result.state, {
-        type: 'user_message',
-        payload: '45',
+        user_message: '45',
       });
       expect(result.messages).toContain('Failed: 45%');
     });
@@ -292,16 +284,13 @@ describe('Integration Tests', () => {
       const state: State = { __currentNodeId: '', __flowId: 'survey' };
 
       let result = await flow.compile(state, {
-        type: 'user_message',
-        payload: '',
+        user_message: '',
       });
       result = await flow.compile(result.state, {
-        type: 'user_message',
-        payload: 'First',
+        user_message: 'First',
       });
       result = await flow.compile(result.state, {
-        type: 'user_message',
-        payload: 'Second',
+        user_message: 'Second',
       });
 
       expect(result.messages).toContain('Q1: First, Q2: Second');
