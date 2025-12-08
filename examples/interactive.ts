@@ -1,6 +1,6 @@
 import * as readline from 'readline';
 import type { State, StepResult } from '../src/types';
-import { createGraph } from '../src/flow';
+import { ChatGraph, createGraph } from '../src/graph';
 import { END, START } from '../src';
 
 /**
