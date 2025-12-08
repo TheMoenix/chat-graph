@@ -108,7 +108,7 @@ const jsonNodes = [
       targetField: 'confirmed',
     },
   },
-] as const;
+];
 
 type JsonNodeIds = (typeof jsonNodes)[number]['id'];
 
@@ -116,20 +116,19 @@ const jsonBasedFlow = new ChatGraph({
   id: 'onboarding-json',
   name: 'JSON-Based Onboarding',
   nodes: jsonNodes,
-  edges: new Map<
-    JsonNodeIds | typeof START,
-    JsonNodeIds | typeof END | ((state: State) => JsonNodeIds | typeof END)
-  >([
-    [START, 'greet'],
-    ['greet', 'ask_age'],
-    ['ask_age', 'confirm'],
-    [
-      'confirm',
-      (state: State) => {
+  edges: [
+    { from: START, to: 'greet' },
+    { from: 'greet', to: 'ask_age' },
+    { from: 'ask_age', to: 'confirm' },
+    {
+      from: 'confirm',
+      to: (state: State) => {
         return state.confirmed === 'yes' ? END : 'greet';
       },
-    ],
-  ]),
+    },
+  ],
+  // Alternative edges definition using Map
+  //
 });
 
 /**

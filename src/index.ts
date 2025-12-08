@@ -20,7 +20,6 @@ export type {
   Node,
   NodeAction,
   NodeValidate,
-  ExecutableNode,
 } from './types';
 
 // Export constants

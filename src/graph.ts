@@ -7,13 +7,13 @@ import type {
   Node,
   NodeAction,
   NodeValidate,
-  ExecutableNode,
-  ExecutableNodeAction,
-  ExecutableNodeValidate,
-  Flow,
+  RunnableNodeAction,
+  RunnableNodeValidate,
+  Graph,
   ExtractNodeIds,
-  RouterNode,
-  EdgesMap,
+  Runnable,
+  Edge,
+  Edges,
 } from './types';
 
 import { START, END } from './constants';
@@ -40,10 +40,10 @@ import { START, END } from './constants';
 export class ChatGraph<Nodes extends readonly Node[] = readonly []> {
   private readonly id: string;
   private readonly name: string;
-  private nodes: ExecutableNode[] = [];
-  private readonly edges: EdgesMap<Nodes> = new Map();
+  private nodes: Node<Runnable>[] = [];
+  private readonly edges: Edges<Nodes, true> = new Map();
 
-  constructor(config: Flow<Nodes>) {
+  constructor(config: Graph<Nodes>) {
     this.id = config.id;
     this.name = config.name;
 
@@ -51,14 +51,14 @@ export class ChatGraph<Nodes extends readonly Node[] = readonly []> {
     this.nodes = this.processNodes(config.nodes);
 
     if (config.edges) {
-      this.edges = config.edges;
+      this.edges = this.processEdges(config.edges);
     }
   }
 
   /**
    * Processes nodes to convert config-based definitions to executable functions
    */
-  private processNodes(nodes: readonly Node[]): ExecutableNode[] {
+  private processNodes(nodes: readonly Node[]): Node<Runnable>[] {
     return nodes.map((node) => ({
       id: node.id,
       action: this.createAction(node.action),
@@ -66,10 +66,20 @@ export class ChatGraph<Nodes extends readonly Node[] = readonly []> {
     }));
   }
 
+  private processEdges(edges: Edges<Nodes, false>): Edges<Nodes, true> {
+    const edgeMap: Edges<Nodes, true> = new Map();
+
+    for (const edge of edges) {
+      edgeMap.set(edge.from, edge.to);
+    }
+
+    return edgeMap;
+  }
+
   /**
    * Creates an action function from config
    */
-  private createAction(action: NodeAction): ExecutableNodeAction {
+  private createAction(action: NodeAction): RunnableNodeAction {
     if (typeof action === 'function') {
       return action;
     }
@@ -83,7 +93,7 @@ export class ChatGraph<Nodes extends readonly Node[] = readonly []> {
   /**
    * Creates a validation function from config
    */
-  private createValidate(validate: NodeValidate): ExecutableNodeValidate {
+  private createValidate(validate: NodeValidate): RunnableNodeValidate {
     if (typeof validate === 'function') {
       return validate;
     }
@@ -94,11 +104,7 @@ export class ChatGraph<Nodes extends readonly Node[] = readonly []> {
       : [validate.rules];
 
     return (state: State, event: ChatEvent): ValidationResult => {
-      if (!event.user_message) {
-        return { isValid: false };
-      }
-
-      const input = event.user_message;
+      const input = event.user_message || '';
 
       // Run all validators
       for (const validator of rules) {
@@ -258,10 +264,7 @@ export class ChatGraph<Nodes extends readonly Node[] = readonly []> {
 
 class ChatGraphBuilder<Nodes extends readonly Node[] = readonly []> {
   private readonly nodes: Node[] = [];
-  private readonly edges: Map<
-    string | typeof START,
-    string | Function | typeof END
-  > = new Map();
+  private readonly edges: Edges<Nodes> = [];
 
   addNode<const NewNode extends Node>(
     node: NewNode
@@ -278,11 +281,8 @@ class ChatGraphBuilder<Nodes extends readonly Node[] = readonly []> {
    * @param to - Target node ID or "__END__"
    * @returns The flow instance for chaining
    */
-  addEdge(
-    from: ExtractNodeIds<Nodes> | typeof START,
-    to: ExtractNodeIds<Nodes> | RouterNode<Nodes> | typeof END
-  ): this {
-    this.edges.set(from, to);
+  addEdge(from: Edge<Nodes>['from'], to: Edge<Nodes>['to']): this {
+    this.edges.push({ from, to });
     return this;
   }
 
@@ -291,7 +291,7 @@ class ChatGraphBuilder<Nodes extends readonly Node[] = readonly []> {
     return new ChatGraph({
       ...config,
       nodes: this.nodes as unknown as Nodes,
-      edges: this.edges as EdgesMap<Nodes>,
+      edges: this.edges,
     });
   }
 }

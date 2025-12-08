@@ -59,73 +59,92 @@ export type ValidationResult = {
   updates?: Partial<State>;
 };
 
-export type ExecutableNodeAction = (
+export type Runnable = true;
+
+export type RunnableNodeAction = (
   state: State,
   event: ChatEvent
 ) => ActionResult | Promise<ActionResult>;
 
-export type NodeAction =
-  | ((state: State, event: ChatEvent) => ActionResult | Promise<ActionResult>)
-  | {
-      message: string;
-    };
+export type StaticNodeAction = {
+  message: string;
+};
 
-export type ExecutableNodeValidate = (
+export type NodeAction<Runnable extends boolean = false> = Runnable extends true
+  ? RunnableNodeAction
+  : RunnableNodeAction | StaticNodeAction;
+
+export type RunnableNodeValidate = (
   state: State,
   event: ChatEvent
 ) => ValidationResult | Promise<ValidationResult>;
 
-export type NodeValidate =
-  | ((
-      state: State,
-      event: ChatEvent
-    ) => ValidationResult | Promise<ValidationResult>)
-  | {
-      rules: readonly { regex: string; errorMessage: string }[];
-      /** Field name to store validated input in state */
-      targetField?: string | null;
-    };
+export type StaticNodeValidate = {
+  rules: readonly { regex: string; errorMessage: string }[];
+  /** Field name to store validated input in state */
+  targetField?: string | null;
+};
 
-/**
- * Public node definition with flexible action and validation types
- */
-export type Node = {
-  /** Node unique identifier */
+export type NodeValidate<Runnable extends boolean = false> =
+  Runnable extends true
+    ? RunnableNodeValidate
+    : RunnableNodeValidate | StaticNodeValidate;
+
+type NodeId = {
   id: string;
-  /** This is for executing the node's main action, like asking the user a question */
-  action: NodeAction;
-  /** This is for validating the user input and is it sufficient to wrap this node and move to the next node, like if the user answered the question correctly or in the accepted format */
-  validate?: NodeValidate | null;
 };
 
 /**
  * Public node definition with flexible action and validation types
  */
-export type ExecutableNode = {
-  /** Node unique identifier */
-  id: string;
+export type Node<Runnable extends boolean = false> = NodeId & {
   /** This is for executing the node's main action, like asking the user a question */
-  action: ExecutableNodeAction;
+  action: NodeAction<Runnable>;
   /** This is for validating the user input and is it sufficient to wrap this node and move to the next node, like if the user answered the question correctly or in the accepted format */
-  validate?: ExecutableNodeValidate | null;
+  validate?: NodeValidate<Runnable> | null;
 };
 
-export type ExtractNodeIds<Nodes extends readonly Node[]> = Nodes[number]['id'];
+export type ExtractNodeIds<Nodes extends readonly NodeId[]> =
+  Nodes[number]['id'];
 
-export type RouterNode<Nodes extends readonly Node[]> = (
+export type RouterNode<Nodes extends readonly NodeId[]> = (
   state: State
 ) => Nodes[number]['id'] | typeof END;
 
-export type EdgesMap<Nodes extends readonly Node[]> = Map<
-  ExtractNodeIds<Nodes> | typeof START,
-  ExtractNodeIds<Nodes> | RouterNode<Nodes> | typeof END
+export type EdgeFrom<Nodes extends readonly NodeId[]> =
+  | ExtractNodeIds<Nodes>
+  | typeof START;
+
+export type EdgeTo<Nodes extends readonly NodeId[]> =
+  | ExtractNodeIds<Nodes>
+  | RouterNode<Nodes>
+  | typeof END;
+
+export type Edge<Nodes extends readonly NodeId[]> = {
+  from: EdgeFrom<Nodes>;
+  to: EdgeTo<Nodes>;
+};
+
+type EdgesArray<Nodes extends readonly NodeId[]> = Edge<Nodes>[];
+
+type EdgesMap<Nodes extends readonly NodeId[]> = Map<
+  EdgeFrom<Nodes>,
+  EdgeTo<Nodes>
 >;
 
-export type Flow<Nodes extends readonly Node[]> = {
+export type Edges<
+  Nodes extends readonly NodeId[],
+  RunnableMap extends boolean = false,
+> = RunnableMap extends false ? EdgesArray<Nodes> : EdgesMap<Nodes>;
+
+export type Graph<
+  Nodes extends readonly Node<R>[],
+  R extends boolean = false,
+> = {
   id: string;
   name: string;
   nodes: Nodes;
-  edges: EdgesMap<Nodes>;
+  edges: Edges<Nodes, R>;
 };
 
 type HasDuplicates<
