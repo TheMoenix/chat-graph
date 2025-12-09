@@ -57,10 +57,7 @@ async function demo() {
   };
 
   // Interactive conversation
-  let state: State = {
-    __currentNodeId: '',
-    __flowId: 'onboarding',
-  };
+  let state: State = {};
 
   console.log('=== Flow Start ===\n');
 
@@ -75,9 +72,12 @@ async function demo() {
   while (!result.done) {
     const userInput = await askUser('You: ');
 
-    result = await flow.compile(state, {
-      user_message: userInput,
-    });
+    result = await flow.compile(
+      {
+        user_message: userInput,
+      },
+      state
+    );
 
     // Display bot messages
     result.messages.forEach((msg: string) => console.log(`Bot: ${msg}`));
@@ -85,11 +85,7 @@ async function demo() {
   }
 
   console.log('\n✅ Conversation complete!');
-  console.log('Final state:', {
-    name: state.name,
-    email: state.email,
-    age: state.age,
-  });
+  console.log('Final state:', state);
 
   rl.close();
 }

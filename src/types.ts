@@ -1,11 +1,8 @@
 import { START, END } from './constants';
 
-/**
- * Represents the state of a conversation flow
- */
-export type State = {
+export type Tracker<Nodes extends readonly NodeId[]> = {
   /** Current node ID in the flow */
-  __currentNodeId: string;
+  __currentNodeId: ExtractNodeIds<Nodes>;
   /** Whether the current node's action has been executed */
   __isActionTaken?: boolean;
   /** Whether the current node's validation has passed */
@@ -13,10 +10,13 @@ export type State = {
   /** Whether validation has been attempted (to prevent re-executing action) */
   __validationAttempted?: boolean;
   /** Flow identifier */
-  __flowId: string;
-  /** User-defined state properties */
-  [key: string]: any;
+  __graphId: string;
 };
+
+/**
+ * Represents the state of a conversation flow
+ */
+export type State<T = Record<string, any>> = { /** Flow-specific data */ } & T;
 
 /**
  * Event representing user input or system triggers
@@ -66,7 +66,7 @@ export type RunnableNodeAction = (
   event: ChatEvent
 ) => ActionResult | Promise<ActionResult>;
 
-export type StaticNodeAction = {
+type StaticNodeAction = {
   message: string;
 };
 
@@ -107,15 +107,15 @@ export type Node<Runnable extends boolean = false> = NodeId & {
 export type ExtractNodeIds<Nodes extends readonly NodeId[]> =
   Nodes[number]['id'];
 
-export type RouterNode<Nodes extends readonly NodeId[]> = (
+type RouterNode<Nodes extends readonly NodeId[]> = (
   state: State
 ) => Nodes[number]['id'] | typeof END;
 
-export type EdgeFrom<Nodes extends readonly NodeId[]> =
+type EdgeFrom<Nodes extends readonly NodeId[]> =
   | ExtractNodeIds<Nodes>
   | typeof START;
 
-export type EdgeTo<Nodes extends readonly NodeId[]> =
+type EdgeTo<Nodes extends readonly NodeId[]> =
   | ExtractNodeIds<Nodes>
   | RouterNode<Nodes>
   | typeof END;
@@ -142,7 +142,6 @@ export type Graph<
   R extends boolean = false,
 > = {
   id: string;
-  name: string;
   nodes: Nodes;
   edges: Edges<Nodes, R>;
 };

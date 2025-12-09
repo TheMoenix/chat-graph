@@ -14,6 +14,7 @@ import type {
   Runnable,
   Edge,
   Edges,
+  Tracker,
 } from './types';
 
 import { START, END } from './constants';
@@ -38,14 +39,18 @@ import { START, END } from './constants';
  * ```
  */
 export class ChatGraph<Nodes extends readonly Node[] = readonly []> {
-  private readonly id: string;
-  private readonly name: string;
   private nodes: Node<Runnable>[] = [];
   private readonly edges: Edges<Nodes, true> = new Map();
+  declare tracker: Tracker<Nodes>;
 
   constructor(config: Graph<Nodes>) {
-    this.id = config.id;
-    this.name = config.name;
+    this.tracker = {
+      __graphId: config.id,
+      __currentNodeId: START,
+      __isActionTaken: false,
+      __isResponseValid: false,
+      __validationAttempted: false,
+    };
 
     // Convert Node[] to ExecutableNode[] by processing actions and validations
     this.nodes = this.processNodes(config.nodes);
@@ -144,38 +149,35 @@ export class ChatGraph<Nodes extends readonly Node[] = readonly []> {
    * @param event - User input event
    * @returns Step result with updated state and messages
    */
-  async compile(state: State, event: ChatEvent): Promise<StepResult> {
+  async compile(event: ChatEvent, state: State): Promise<StepResult> {
+    if (this.tracker.__currentNodeId === START) {
+      await this.getNextNode(state);
+    }
     const result = await this.executeNode(state, event);
 
     // If action not taken yet AND no messages (initial state, not validation failure)
     // then keep executing until action is taken
-    if (!result.state.__isActionTaken && result.messages.length === 0) {
-      return this.compile(result.state, event);
-    }
+    // if (!this.tracker.__isActionTaken && result.messages.length === 0) {
+    //   return this.compile(event, result.state);
+    // }
 
     // If both phases complete (action taken + validated), move to next node
-    if (result.state.__isActionTaken && result.state.__isResponseValid) {
-      const nextNodeId = this.getNextNode(
-        result.state.__currentNodeId,
-        result.state
-      );
+    if (this.tracker.__isActionTaken && this.tracker.__isResponseValid) {
+      await this.getNextNode(result.state);
 
       // Check if flow is done
-      if (nextNodeId === END) {
+      if (this.tracker.__currentNodeId === END) {
         return { ...result, done: true };
       }
 
+      this.tracker = {
+        ...this.tracker,
+        __isActionTaken: false,
+        __isResponseValid: false,
+        __validationAttempted: false,
+      };
       // Move to next node and execute its action recursively
-      return this.compile(
-        {
-          ...result.state,
-          __isActionTaken: false,
-          __isResponseValid: false,
-          __validationAttempted: false,
-          __currentNodeId: nextNodeId,
-        },
-        event
-      );
+      return this.compile(event, result.state);
     }
 
     // Action taken but waiting for validation OR validation failed
@@ -189,41 +191,37 @@ export class ChatGraph<Nodes extends readonly Node[] = readonly []> {
     state: State,
     event: ChatEvent
   ): Promise<StepResult> {
-    const currentNodeId =
-      state.__currentNodeId || this.getNextNode(START, state);
-    const node = this.nodes.find((n) => n.id === currentNodeId);
+    // await this.getNextNode(state);
+    const node = this.nodes.find((n) => n.id === this.tracker.__currentNodeId);
     const results: StepResult = { state, messages: [], done: false };
 
     if (!node) {
+      console.warn(`Node not found: ${this.tracker.__currentNodeId}`);
       results.done = true;
       return results;
     }
 
     // PHASE 1: Action (if not taken yet)
-    if (!state.__isActionTaken) {
+    if (!this.tracker.__isActionTaken) {
       const actionResult = await node.action(state, event);
       results.messages = actionResult.messages || [];
       results.state = {
         ...state,
         ...actionResult.updates,
-        __currentNodeId: node.id,
+      };
+      this.tracker = {
+        ...this.tracker,
         __isActionTaken: true,
-        __isResponseValid: node.validate ? false : true,
-        __validationAttempted: false,
       };
       return results;
     }
 
     // PHASE 2: Validation (if action taken but not validated)
-    if (!state.__isResponseValid && node.validate) {
+    if (!this.tracker.__isResponseValid && node.validate) {
       const validationResult = await node.validate(state, event);
 
       if (!validationResult.isValid) {
-        // Validation failed - keep action taken, mark validation attempted
-        results.state = {
-          ...state,
-          __validationAttempted: true,
-        };
+        this.tracker.__validationAttempted = true;
         results.messages = validationResult.errorMessage
           ? [validationResult.errorMessage]
           : [];
@@ -234,31 +232,37 @@ export class ChatGraph<Nodes extends readonly Node[] = readonly []> {
       results.state = {
         ...state,
         ...validationResult.updates,
-        __isResponseValid: true,
       };
+      this.tracker.__isResponseValid = true;
       return results;
+    } else {
+      // No validation needed, mark as valid
+      this.tracker.__isResponseValid = true;
     }
 
-    // Both phases complete or no validation needed
     return results;
   }
 
   /**
    * Determines the next node based on edges and conditional routing
    */
-  private getNextNode(
-    nodeId: ExtractNodeIds<Nodes>,
+  private async getNextNode(
+    // nodeId: ExtractNodeIds<Nodes>,
     state: State
-  ): ExtractNodeIds<Nodes> | typeof END {
-    if (this.edges.has(nodeId)) {
-      const to = this.edges.get(nodeId)!;
+  ): Promise<void> {
+    if (this.edges.has(this.tracker.__currentNodeId || START)) {
+      const to = this.edges.get(this.tracker.__currentNodeId || START)!;
       if (typeof to === 'function') {
-        return to(state) as ExtractNodeIds<Nodes> | typeof END;
+        this.tracker.__currentNodeId = (await to(state)) as
+          | ExtractNodeIds<Nodes>
+          | typeof END;
+        return;
       } else {
-        return to;
+        this.tracker.__currentNodeId = to;
+        return;
       }
     }
-    return END;
+    this.tracker.__currentNodeId = END;
   }
 }
 
