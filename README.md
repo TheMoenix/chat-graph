@@ -44,7 +44,7 @@ console.log(result.messages); // ["Nice to meet you, John!"]
 
 ## Documentation
 
-Full documentation coming soon.
+For full documentation, visit [https://themoenix.github.io/chat-graph/](https://themoenix.github.io/chat-graph/).
 
 ## License
 
