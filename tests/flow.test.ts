@@ -407,9 +407,7 @@ describe('Flow', () => {
         user_message: '',
       });
 
-      // When nodes auto-progress, only the last message is returned in the result
-      // because invoke is called recursively
-      expect(result.messages).toContain('Step 3');
+      expect(result.messages).toEqual(['Step 1', 'Step 2', 'Step 3']);
       expect(flow.isDone).toBe(true);
     });
   });

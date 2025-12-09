@@ -18,8 +18,6 @@ import type {
 
 import { START, END } from './constants';
 
-// TODO : fix the messages to carry over when auto progressing through noUserInput nodes, only reset with new input
-
 /**
  * Flow engine that executes conversation flows with two-phase nodes (action + validation)
  *
@@ -201,8 +199,12 @@ export class ChatGraph<
         __isActionTaken: false,
         __isResponseValid: false,
       };
-      // Move to next node and execute its action recursively
-      return this.invoke(event);
+
+      const nextResult = await this.invoke(event);
+      return {
+        ...result,
+        messages: [...result.messages, ...nextResult.messages],
+      };
     }
 
     // Action taken but waiting for validation OR validation failed
