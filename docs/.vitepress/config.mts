@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitepress';
 
 export default defineConfig({
+  base: '/chat-graph/',
   title: 'chat-graph',
   description: 'A conversational flow engine with two-phase nodes',
   themeConfig: {
