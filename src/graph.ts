@@ -2,7 +2,6 @@ import type {
   State,
   ChatEvent,
   StepResult,
-  ActionResult,
   ValidationResult,
   Node,
   NodeAction,
@@ -18,6 +17,8 @@ import type {
 } from './types';
 
 import { START, END } from './constants';
+
+// TODO : fix the messages to carry over when auto progressing through noUserInput nodes, only reset with new input
 
 /**
  * Flow engine that executes conversation flows with two-phase nodes (action + validation)
@@ -38,37 +39,67 @@ import { START, END } from './constants';
  * const result = await flow.compile(state, event);
  * ```
  */
-export class ChatGraph<Nodes extends readonly Node[] = readonly []> {
+export class ChatGraph<
+  Nodes extends readonly Node[] = readonly [],
+  S extends State = {},
+> {
   private nodes: Node<Runnable>[] = [];
   private readonly edges: Edges<Nodes, true> = new Map();
-  declare tracker: Tracker<Nodes>;
+  declare private tracker: Tracker<Nodes>;
+  declare private graphState: State<S>;
 
-  constructor(config: Graph<Nodes>) {
+  constructor(config: Graph<Nodes, false, S>) {
     this.tracker = {
       __graphId: config.id,
       __currentNodeId: START,
       __isActionTaken: false,
       __isResponseValid: false,
-      __validationAttempted: false,
+      __isDone: false,
     };
 
     // Convert Node[] to ExecutableNode[] by processing actions and validations
+    console.log(config.nodes);
     this.nodes = this.processNodes(config.nodes);
+    console.log(this.nodes);
 
     if (config.edges) {
       this.edges = this.processEdges(config.edges);
     }
+
+    if (config.initialState) {
+      this.graphState = config.initialState;
+    }
+  }
+  /** Current conversation state */
+  get state() {
+    return { ...this.graphState };
+  }
+
+  /** Whether the flow has completed */
+  get isDone() {
+    return this.tracker.__isDone;
   }
 
   /**
    * Processes nodes to convert config-based definitions to executable functions
    */
   private processNodes(nodes: readonly Node[]): Node<Runnable>[] {
-    return nodes.map((node) => ({
-      id: node.id,
-      action: this.createAction(node.action),
-      validate: node.validate ? this.createValidate(node.validate) : undefined,
-    }));
+    return nodes.map((node) => {
+      if (node.noUserInput)
+        return {
+          id: node.id,
+          action: this.createAction(node.action),
+          noUserInput: node.noUserInput,
+        };
+      else
+        return {
+          id: node.id,
+          action: this.createAction(node.action),
+          validate: node.validate
+            ? this.createValidate(node.validate)
+            : undefined,
+        };
+    });
   }
 
   private processEdges(edges: Edges<Nodes, false>): Edges<Nodes, true> {
@@ -108,7 +139,7 @@ export class ChatGraph<Nodes extends readonly Node[] = readonly []> {
       ? validate.rules
       : [validate.rules];
 
-    return (state: State, event: ChatEvent): ValidationResult => {
+    return (_: State, event: ChatEvent): ValidationResult => {
       const input = event.user_message || '';
 
       // Run all validators
@@ -130,7 +161,7 @@ export class ChatGraph<Nodes extends readonly Node[] = readonly []> {
 
       return {
         isValid: true,
-        updates,
+        state: updates,
       };
     };
   }
@@ -149,35 +180,29 @@ export class ChatGraph<Nodes extends readonly Node[] = readonly []> {
    * @param event - User input event
    * @returns Step result with updated state and messages
    */
-  async compile(event: ChatEvent, state: State): Promise<StepResult> {
+  async invoke(event: ChatEvent): Promise<StepResult> {
     if (this.tracker.__currentNodeId === START) {
-      await this.getNextNode(state);
+      await this.getNextNode();
     }
-    const result = await this.executeNode(state, event);
-
-    // If action not taken yet AND no messages (initial state, not validation failure)
-    // then keep executing until action is taken
-    // if (!this.tracker.__isActionTaken && result.messages.length === 0) {
-    //   return this.compile(event, result.state);
-    // }
+    const result = await this.executeNode(event);
 
     // If both phases complete (action taken + validated), move to next node
     if (this.tracker.__isActionTaken && this.tracker.__isResponseValid) {
-      await this.getNextNode(result.state);
+      await this.getNextNode();
 
       // Check if flow is done
       if (this.tracker.__currentNodeId === END) {
-        return { ...result, done: true };
+        this.tracker.__isDone = true;
+        return result;
       }
 
       this.tracker = {
         ...this.tracker,
         __isActionTaken: false,
         __isResponseValid: false,
-        __validationAttempted: false,
       };
       // Move to next node and execute its action recursively
-      return this.compile(event, result.state);
+      return this.invoke(event);
     }
 
     // Action taken but waiting for validation OR validation failed
@@ -187,93 +212,144 @@ export class ChatGraph<Nodes extends readonly Node[] = readonly []> {
   /**
    * Executes a single node (one phase: action or validation)
    */
-  private async executeNode(
-    state: State,
-    event: ChatEvent
-  ): Promise<StepResult> {
+  private async executeNode(event: ChatEvent): Promise<StepResult> {
     // await this.getNextNode(state);
     const node = this.nodes.find((n) => n.id === this.tracker.__currentNodeId);
-    const results: StepResult = { state, messages: [], done: false };
 
     if (!node) {
       console.warn(`Node not found: ${this.tracker.__currentNodeId}`);
-      results.done = true;
-      return results;
+      return {
+        messages: [],
+      };
     }
 
-    // PHASE 1: Action (if not taken yet)
     if (!this.tracker.__isActionTaken) {
-      const actionResult = await node.action(state, event);
-      results.messages = actionResult.messages || [];
-      results.state = {
-        ...state,
-        ...actionResult.updates,
-      };
-      this.tracker = {
-        ...this.tracker,
-        __isActionTaken: true,
-      };
-      return results;
-    }
-
-    // PHASE 2: Validation (if action taken but not validated)
-    if (!this.tracker.__isResponseValid && node.validate) {
-      const validationResult = await node.validate(state, event);
-
-      if (!validationResult.isValid) {
-        this.tracker.__validationAttempted = true;
-        results.messages = validationResult.errorMessage
-          ? [validationResult.errorMessage]
-          : [];
-        return results;
-      }
-
-      // Validation passed
-      results.state = {
-        ...state,
-        ...validationResult.updates,
-      };
+      return this.executeNodeAction(node, event);
+    } else if (!this.tracker.__isResponseValid && node.validate) {
+      return this.executeNodeValidation(node, event);
+    } else if (!node.validate) {
       this.tracker.__isResponseValid = true;
-      return results;
-    } else {
+    }
+    return {
+      messages: [],
+    };
+  }
+
+  private async executeNodeAction(
+    node: Node<Runnable>,
+    event: ChatEvent
+  ): Promise<StepResult> {
+    const actionResult = await node.action(this.graphState, event);
+    this.tracker.__isActionTaken = true;
+    this.graphState = {
+      ...this.graphState,
+      ...actionResult.state,
+    };
+    if (node.noUserInput) {
+      this.tracker.__isResponseValid = true;
+    }
+    return {
+      messages: actionResult.messages || [],
+    };
+  }
+
+  private async executeNodeValidation(
+    node: Node<Runnable>,
+    event: ChatEvent
+  ): Promise<StepResult> {
+    if (!node.validate) {
       // No validation needed, mark as valid
       this.tracker.__isResponseValid = true;
+      return {
+        messages: [],
+      };
     }
 
-    return results;
+    const validationResult = await node.validate(this.graphState, event);
+    this.graphState = {
+      ...this.graphState,
+      ...validationResult.state,
+    };
+    if (!validationResult.isValid) {
+      return {
+        messages: validationResult.errorMessage
+          ? [validationResult.errorMessage]
+          : [],
+      };
+    } else {
+      // Validation passed
+      this.tracker.__isResponseValid = true;
+      return {
+        messages: [],
+      };
+    }
   }
 
   /**
    * Determines the next node based on edges and conditional routing
    */
-  private async getNextNode(
-    // nodeId: ExtractNodeIds<Nodes>,
-    state: State
-  ): Promise<void> {
+  private async getNextNode(): Promise<void> {
     if (this.edges.has(this.tracker.__currentNodeId || START)) {
       const to = this.edges.get(this.tracker.__currentNodeId || START)!;
       if (typeof to === 'function') {
-        this.tracker.__currentNodeId = (await to(state)) as
-          | ExtractNodeIds<Nodes>
-          | typeof END;
-        return;
+        this.tracker.__currentNodeId = await to(this.graphState);
       } else {
         this.tracker.__currentNodeId = to;
-        return;
       }
+      return;
     }
     this.tracker.__currentNodeId = END;
   }
 }
 
-class ChatGraphBuilder<Nodes extends readonly Node[] = readonly []> {
-  private readonly nodes: Node[] = [];
-  private readonly edges: Edges<Nodes> = [];
+/**
+ * Builder class for constructing ChatGraph instances
+ *
+ * @example
+ * ```typescript
+ * const flow = createGraph()
+ *   .addNode({
+ *     id: 'greet',
+ *     action: { message: "Hi! What's your name?" },
+ *     validate: {
+ *       rules: [{ regex: '\\w+', errorMessage: 'Please enter a valid name.' }],
+ *       targetField: 'name',
+ *     },
+ *   })
+ *   .addNode({
+ *     id: 'welcome',
+ *     action: { message: "Nice to meet you, {{name}}!" },
+ *   })
+ *   .addEdge(START, 'greet')
+ *   .addEdge('greet', 'welcome')
+ *   .addEdge('welcome', END)
+ *   .build({ id: 'onboarding' });
+ *
+ * const state : State = {};
+ * const event: ChatEvent = { user_message: "Alice" };
+ * const result = await flow.invoke(event, state);
+ * console.log(result);
+ * // Output:
+ * // {
+ * //   state: { name: 'Alice' },
+ * //   messages: [ "Nice to meet you, Alice!" ],
+ * //   done: true
+ * // }
+ * ```
+ */
+export class ChatGraphBuilder<Nodes extends Node[] = []> {
+  private nodes: Node[] = [];
+  private edges: Edges<Nodes> = [];
 
+  /**
+   * Adds a node to the graph
+   *
+   * @param node - Node configuration
+   * @returns The flow instance for chaining
+   */
   addNode<const NewNode extends Node>(
     node: NewNode
-  ): ChatGraphBuilder<readonly [...Nodes, NewNode]> {
-    // Store node as-is; ChatGraph will process it
+  ): ChatGraphBuilder<[...Nodes, NewNode]> {
     this.nodes.push(node);
     return this as any; // Type assertion needed for generics accumulation
   }
@@ -290,8 +366,13 @@ class ChatGraphBuilder<Nodes extends readonly Node[] = readonly []> {
     return this;
   }
 
-  build(config: { id: string; name: string }): ChatGraph<Nodes> {
-    // Convert to final ChatGraph with proper typing
+  /**
+   * Builds the chat graph
+   *
+   * @param config - Graph configuration
+   * @returns The constructed ChatGraph instance
+   */
+  build(config: { id: string }): ChatGraph<Nodes> {
     return new ChatGraph({
       ...config,
       nodes: this.nodes as unknown as Nodes,
@@ -300,7 +381,7 @@ class ChatGraphBuilder<Nodes extends readonly Node[] = readonly []> {
   }
 }
 
-// Helper function
+/** Helper function to create a new chat graph builder */
 export function createGraph() {
   return new ChatGraphBuilder();
 }

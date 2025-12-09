@@ -7,10 +7,10 @@ export type Tracker<Nodes extends readonly NodeId[]> = {
   __isActionTaken?: boolean;
   /** Whether the current node's validation has passed */
   __isResponseValid?: boolean;
-  /** Whether validation has been attempted (to prevent re-executing action) */
-  __validationAttempted?: boolean;
   /** Flow identifier */
   __graphId: string;
+  /** Flow identifier */
+  __isDone: boolean;
 };
 
 /**
@@ -29,12 +29,8 @@ export type ChatEvent = {
  * Result of executing a step in the flow
  */
 export type StepResult = {
-  /** Updated state after step execution */
-  state: State;
   /** Messages to send to the user */
   messages: string[];
-  /** Whether the flow has completed */
-  done: boolean;
 };
 
 /**
@@ -44,7 +40,7 @@ export type ActionResult = {
   /** Messages to send to user */
   messages?: string[];
   /** State updates to apply */
-  updates?: Partial<State>;
+  state?: Partial<State>;
 };
 
 /**
@@ -56,7 +52,7 @@ export type ValidationResult = {
   /** Error message to show if validation failed */
   errorMessage?: string;
   /** State updates to apply if validation passed */
-  updates?: Partial<State>;
+  state?: Partial<State>;
 };
 
 export type Runnable = true;
@@ -94,15 +90,51 @@ type NodeId = {
   id: string;
 };
 
+type NodeBase<Runnable extends boolean> = NodeId & {
+  /** This is for executing the node's main action, like asking the user a question */
+  action: NodeAction<Runnable>;
+};
+
+/** When user input is expected */
+type NodeWithUserInput<Runnable extends boolean> = NodeBase<Runnable> & {
+  /**
+   * Indicates that no user input is expected for this node
+   * When this is true, after the action is executed, the flow moves to the next node automatically
+   * Note: You can't have validate if noUserInput is true
+   * @optional
+   */
+  noUserInput?: false; // TODO try omit this field entirely
+  /**
+   * This is for validating the user input and is it sufficient to wrap this node and move to the next node,
+   * like if the user answered the question correctly or in the accepted format
+   * Note: You can't have validate if noUserInput is true
+   * @optional
+   */
+  validate?: NodeValidate<Runnable> | null;
+};
+
+/** When this is true, the node does not expect user input */
+type NodeWithoutUserInput<Runnable extends boolean> = NodeBase<Runnable> & {
+  /**
+   * Indicates that no user input is expected for this node
+   * When this is true, after the action is executed, the flow moves to the next node automatically
+   * Note: You can't have validate if noUserInput is true
+   */
+  noUserInput: true;
+  /**
+   * This is for validating the user input and is it sufficient to wrap this node and move to the next node,
+   * like if the user answered the question correctly or in the accepted format
+   * Note: You can't have validate if noUserInput is true
+   */
+  validate?: never;
+};
+
 /**
  * Public node definition with flexible action and validation types
  */
-export type Node<Runnable extends boolean = false> = NodeId & {
-  /** This is for executing the node's main action, like asking the user a question */
-  action: NodeAction<Runnable>;
-  /** This is for validating the user input and is it sufficient to wrap this node and move to the next node, like if the user answered the question correctly or in the accepted format */
-  validate?: NodeValidate<Runnable> | null;
-};
+export type Node<Runnable extends boolean = false> =
+  | NodeWithUserInput<Runnable>
+  | NodeWithoutUserInput<Runnable>;
 
 export type ExtractNodeIds<Nodes extends readonly NodeId[]> =
   Nodes[number]['id'];
@@ -140,10 +172,12 @@ export type Edges<
 export type Graph<
   Nodes extends readonly Node<R>[],
   R extends boolean = false,
+  S extends State = {},
 > = {
   id: string;
   nodes: Nodes;
   edges: Edges<Nodes, R>;
+  initialState?: S;
 };
 
 type HasDuplicates<

@@ -1,5 +1,5 @@
 import * as readline from 'readline';
-import type { State, StepResult } from '../src/types';
+import type { ChatEvent, State, StepResult } from '../src/types';
 import { createGraph } from '../src/graph';
 import { END, START } from '../src';
 
@@ -10,7 +10,6 @@ import { END, START } from '../src';
 async function demo() {
   console.log('=== Chat Flow Interactive Demo ===\n');
 
-  // Using the builder pattern (recommended for type safety)
   const flow = createGraph()
     .addNode({
       id: 'greet',
@@ -25,6 +24,9 @@ async function demo() {
       action: (state: State) => {
         return {
           messages: [`Nice to meet you, ${state.name}! What's your email?`],
+          state: {
+            just_testing: 'yeah',
+          },
         };
       },
       validate: {
@@ -37,10 +39,41 @@ async function demo() {
         targetField: 'email',
       },
     })
+    .addNode({
+      id: 'confirm',
+      action: (state: State) => {
+        return {
+          messages: [
+            `Thanks ${state.name}! We've recorded your email as ${state.email}.`,
+            'Do you want to submit or start over? (Type "submit" or "restart", default is restart)',
+          ],
+        };
+      },
+      validate: {
+        rules: [],
+        targetField: 'submit_choice',
+      },
+    })
+    .addNode({
+      id: 'thanks',
+      action: { message: 'Thank you!' },
+      noUserInput: true,
+    })
     .addEdge(START, 'greet')
     .addEdge('greet', 'ask_email')
-    .addEdge('ask_email', END)
-    .build({ id: 'onboarding', name: 'User Onboarding' });
+    .addEdge('ask_email', 'confirm')
+    .addEdge('confirm', (state: State) => {
+      if (
+        state.submit_choice &&
+        state.submit_choice.toLowerCase() === 'submit'
+      ) {
+        return 'thanks';
+      } else {
+        return 'greet';
+      }
+    })
+    .addEdge('thanks', END)
+    .build({ id: 'onboarding' });
 
   // Create readline interface
   const rl = readline.createInterface({
@@ -56,36 +89,27 @@ async function demo() {
     });
   };
 
-  // Interactive conversation
-  let state: State = {};
-
   console.log('=== Flow Start ===\n');
 
   // Initial step
   let result: StepResult = {
-    state,
     messages: [],
-    done: false,
   };
 
   // Conversation loop
-  while (!result.done) {
+  while (!flow.isDone) {
     const userInput = await askUser('You: ');
 
-    result = await flow.compile(
-      {
-        user_message: userInput,
-      },
-      state
-    );
+    result = await flow.invoke({
+      user_message: userInput,
+    });
 
     // Display bot messages
     result.messages.forEach((msg: string) => console.log(`Bot: ${msg}`));
-    state = result.state;
   }
 
   console.log('\n✅ Conversation complete!');
-  console.log('Final state:', state);
+  console.log('Final state:', flow.state);
 
   rl.close();
 }

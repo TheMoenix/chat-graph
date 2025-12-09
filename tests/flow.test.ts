@@ -9,33 +9,30 @@ describe('Flow', () => {
         .addNode({
           id: 'greet',
           action: { message: 'Hello!' },
+          noUserInput: true,
         })
-        .build({ id: 'test-flow', name: 'Test Flow' });
+        .build({ id: 'test-flow' });
 
       expect(flow).toBeDefined();
     });
 
-    it('should execute a simple action node', async () => {
+    it('should execute a simple action node with noUserInput', async () => {
       const flow = createGraph()
         .addNode({
           id: 'greet',
           action: { message: 'Hello!' },
+          noUserInput: true,
         })
         .addEdge(START, 'greet')
         .addEdge('greet', END)
-        .build({ id: 'test', name: 'Test' });
+        .build({ id: 'test' });
 
-      const state: State = {
-        __currentNodeId: '',
-        __flowId: 'test',
-      };
-
-      const result = await flow.compile(state, {
-        user_message: 'hi',
+      const result = await flow.invoke({
+        user_message: '',
       });
 
       expect(result.messages).toContain('Hello!');
-      expect(result.done).toBe(true);
+      expect(flow.isDone).toBe(true);
     });
   });
 
@@ -52,21 +49,14 @@ describe('Flow', () => {
         })
         .addEdge(START, 'askName')
         .addEdge('askName', END)
-        .build({ id: 'test', name: 'Test' });
+        .build({ id: 'test' });
 
-      const state: State = {
-        __currentNodeId: '',
-        __flowId: 'test',
-      };
-
-      const result = await flow.compile(state, {
+      const result = await flow.invoke({
         user_message: '',
       });
 
       expect(result.messages).toContain('What is your name?');
-      expect(result.state.__isActionTaken).toBe(true);
-      expect(result.state.__isResponseValid).toBe(false);
-      expect(result.done).toBe(false);
+      expect(flow.isDone).toBe(false);
     });
 
     it('should validate user response in second phase', async () => {
@@ -81,29 +71,23 @@ describe('Flow', () => {
         })
         .addEdge(START, 'askName')
         .addEdge('askName', END)
-        .build({ id: 'test', name: 'Test' });
+        .build({ id: 'test' });
 
       // First: action phase
-      const state: State = {
-        __currentNodeId: '',
-        __flowId: 'test',
-      };
-
-      let result = await flow.compile(state, {
+      let result = await flow.invoke({
         user_message: '',
       });
 
-      expect(result.state.__isActionTaken).toBe(true);
-      expect(result.state.__isResponseValid).toBe(false);
+      expect(result.messages).toContain('What is your name?');
+      expect(flow.isDone).toBe(false);
 
       // Second: validation phase
-      result = await flow.compile(result.state, {
+      result = await flow.invoke({
         user_message: 'John',
       });
 
-      expect(result.state.__isResponseValid).toBe(true);
-      expect(result.state.name).toBe('John');
-      expect(result.done).toBe(true);
+      expect((flow.state as any).name).toBe('John');
+      expect(flow.isDone).toBe(true);
     });
 
     it('should show error message on validation failure', async () => {
@@ -120,27 +104,20 @@ describe('Flow', () => {
         })
         .addEdge(START, 'askEmail')
         .addEdge('askEmail', END)
-        .build({ id: 'test', name: 'Test' });
+        .build({ id: 'test' });
 
       // Action phase
-      const state: State = {
-        __currentNodeId: '',
-        __flowId: 'test',
-      };
-
-      let result = await flow.compile(state, {
+      let result = await flow.invoke({
         user_message: '',
       });
 
       // Invalid validation
-      result = await flow.compile(result.state, {
+      result = await flow.invoke({
         user_message: 'notanemail',
       });
 
       expect(result.messages).toContain('Invalid email');
-      expect(result.state.__isResponseValid).toBe(false);
-      expect(result.state.__validationAttempted).toBe(true);
-      expect(result.done).toBe(false);
+      expect(flow.isDone).toBe(false);
     });
   });
 
@@ -160,39 +137,34 @@ describe('Flow', () => {
         })
         .addEdge(START, 'askName')
         .addEdge('askName', END)
-        .build({ id: 'test', name: 'Test' });
-
-      const state: State = {
-        __currentNodeId: '',
-        __flowId: 'test',
-      };
+        .build({ id: 'test' });
 
       // Action
-      let result = await flow.compile(state, {
+      let result = await flow.invoke({
         user_message: '',
       });
 
       // Fail first validator
-      result = await flow.compile(result.state, {
+      result = await flow.invoke({
         user_message: '',
       });
 
       expect(result.messages).toContain('Name required');
 
       // Fail second validator
-      result = await flow.compile(result.state, {
+      result = await flow.invoke({
         user_message: 'A',
       });
 
       expect(result.messages).toContain('Min 2 chars');
 
       // Pass all validators
-      result = await flow.compile(result.state, {
+      result = await flow.invoke({
         user_message: 'John',
       });
 
-      expect(result.state.name).toBe('John');
-      expect(result.done).toBe(true);
+      expect((flow.state as any).name).toBe('John');
+      expect(flow.isDone).toBe(true);
     });
   });
 
@@ -200,20 +172,24 @@ describe('Flow', () => {
     it('should interpolate state variables in messages', async () => {
       const flow = createGraph()
         .addNode({
+          id: 'setName',
+          action: (state: State) => ({
+            messages: [],
+            state: { name: 'Alice' },
+          }),
+          noUserInput: true,
+        })
+        .addNode({
           id: 'greet',
           action: { message: 'Hello, {name}!' },
+          noUserInput: true,
         })
-        .addEdge(START, 'greet')
+        .addEdge(START, 'setName')
+        .addEdge('setName', 'greet')
         .addEdge('greet', END)
-        .build({ id: 'test', name: 'Test' });
+        .build({ id: 'test' });
 
-      const state: State = {
-        __currentNodeId: '',
-        __flowId: 'test',
-        name: 'Alice',
-      };
-
-      const result = await flow.compile(state, {
+      const result = await flow.invoke({
         user_message: '',
       });
 
@@ -236,16 +212,19 @@ describe('Flow', () => {
           id: 'convertAge',
           action: (state: State) => ({
             messages: [],
-            updates: { age: parseInt(state.age) },
+            state: { age: parseInt(state.age) },
           }),
+          noUserInput: true,
         })
         .addNode({
           id: 'adult',
           action: { message: 'You are {age}+' },
+          noUserInput: true,
         })
         .addNode({
           id: 'minor',
           action: { message: 'Under 18' },
+          noUserInput: true,
         })
         .addEdge(START, 'askAge')
         .addEdge('askAge', 'convertAge')
@@ -254,41 +233,69 @@ describe('Flow', () => {
         )
         .addEdge('adult', END)
         .addEdge('minor', END)
-        .build({ id: 'test', name: 'Test' });
+        .build({ id: 'test' });
 
       // Test adult path
-      let state: State = {
-        __currentNodeId: '',
-        __flowId: 'test',
-      };
-
-      let result = await flow.compile(state, {
+      let result = await flow.invoke({
         user_message: '',
       });
 
-      result = await flow.compile(result.state, {
+      result = await flow.invoke({
         user_message: '25',
       });
 
       expect(result.messages).toContain('You are 25+');
-      expect(result.done).toBe(true);
+      expect(flow.isDone).toBe(true);
+    });
+
+    it('should route to minor path correctly', async () => {
+      const flow = createGraph()
+        .addNode({
+          id: 'askAge',
+          action: { message: 'Age?' },
+          validate: {
+            rules: [{ regex: '^\\d+$', errorMessage: 'Enter number' }],
+            targetField: 'age',
+          },
+        })
+        .addNode({
+          id: 'convertAge',
+          action: (state: State) => ({
+            messages: [],
+            state: { age: parseInt(state.age) },
+          }),
+          noUserInput: true,
+        })
+        .addNode({
+          id: 'adult',
+          action: { message: 'You are {age}+' },
+          noUserInput: true,
+        })
+        .addNode({
+          id: 'minor',
+          action: { message: 'Under 18' },
+          noUserInput: true,
+        })
+        .addEdge(START, 'askAge')
+        .addEdge('askAge', 'convertAge')
+        .addEdge('convertAge', (state: State) =>
+          state.age >= 18 ? 'adult' : 'minor'
+        )
+        .addEdge('adult', END)
+        .addEdge('minor', END)
+        .build({ id: 'test' });
 
       // Test minor path
-      state = {
-        __currentNodeId: '',
-        __flowId: 'test',
-      };
-
-      result = await flow.compile(state, {
+      let result = await flow.invoke({
         user_message: '',
       });
 
-      result = await flow.compile(result.state, {
+      result = await flow.invoke({
         user_message: '16',
       });
 
       expect(result.messages).toContain('Under 18');
-      expect(result.done).toBe(true);
+      expect(flow.isDone).toBe(true);
     });
   });
 
@@ -299,25 +306,21 @@ describe('Flow', () => {
           id: 'process',
           action: async (state: State, event: ChatEvent) => ({
             messages: ['Processing...'],
-            updates: { processed: true },
+            state: { processed: true },
           }),
+          noUserInput: true,
         })
         .addEdge(START, 'process')
         .addEdge('process', END)
-        .build({ id: 'test', name: 'Test' });
+        .build({ id: 'test' });
 
-      const state: State = {
-        __currentNodeId: '',
-        __flowId: 'test',
-      };
-
-      const result = await flow.compile(state, {
+      const result = await flow.invoke({
         user_message: '',
       });
 
       expect(result.messages).toContain('Processing...');
-      expect(result.state.processed).toBe(true);
-      expect(result.done).toBe(true);
+      expect((flow.state as any).processed).toBe(true);
+      expect(flow.isDone).toBe(true);
     });
 
     it('should support custom validation functions', async () => {
@@ -330,39 +333,34 @@ describe('Flow', () => {
             return {
               isValid,
               errorMessage: isValid ? undefined : 'Wrong code',
-              updates: isValid ? { code: event.user_message } : {},
+              state: isValid ? { code: event.user_message } : {},
             };
           },
         })
         .addEdge(START, 'custom')
         .addEdge('custom', END)
-        .build({ id: 'test', name: 'Test' });
-
-      const state: State = {
-        __currentNodeId: '',
-        __flowId: 'test',
-      };
+        .build({ id: 'test' });
 
       // Action
-      let result = await flow.compile(state, {
+      let result = await flow.invoke({
         user_message: '',
       });
 
       // Invalid
-      result = await flow.compile(result.state, {
+      result = await flow.invoke({
         user_message: 'WRONG',
       });
 
       expect(result.messages).toContain('Wrong code');
-      expect(result.done).toBe(false);
+      expect(flow.isDone).toBe(false);
 
       // Valid
-      result = await flow.compile(result.state, {
+      result = await flow.invoke({
         user_message: 'SECRET',
       });
 
-      expect(result.state.code).toBe('SECRET');
-      expect(result.done).toBe(true);
+      expect((flow.state as any).code).toBe('SECRET');
+      expect(flow.isDone).toBe(true);
     });
   });
 
@@ -371,13 +369,48 @@ describe('Flow', () => {
       const builder = createGraph();
 
       const result = builder
-        .addNode({ id: 'a', action: { message: 'A' } })
-        .addNode({ id: 'b', action: { message: 'B' } })
+        .addNode({ id: 'a', action: { message: 'A' }, noUserInput: true })
+        .addNode({ id: 'b', action: { message: 'B' }, noUserInput: true })
         .addEdge(START, 'a')
         .addEdge('a', 'b')
         .addEdge('b', END);
 
       expect(result).toBe(builder);
+    });
+  });
+
+  describe('Nodes Without User Input', () => {
+    it('should auto-progress through noUserInput nodes', async () => {
+      const flow = createGraph()
+        .addNode({
+          id: 'step1',
+          action: { message: 'Step 1' },
+          noUserInput: true,
+        })
+        .addNode({
+          id: 'step2',
+          action: { message: 'Step 2' },
+          noUserInput: true,
+        })
+        .addNode({
+          id: 'step3',
+          action: { message: 'Step 3' },
+          noUserInput: true,
+        })
+        .addEdge(START, 'step1')
+        .addEdge('step1', 'step2')
+        .addEdge('step2', 'step3')
+        .addEdge('step3', END)
+        .build({ id: 'test' });
+
+      const result = await flow.invoke({
+        user_message: '',
+      });
+
+      // When nodes auto-progress, only the last message is returned in the result
+      // because invoke is called recursively
+      expect(result.messages).toContain('Step 3');
+      expect(flow.isDone).toBe(true);
     });
   });
 });
