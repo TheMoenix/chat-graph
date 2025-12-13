@@ -1,7 +1,8 @@
 import * as readline from 'readline';
-import type { ChatEvent, State, StepResult } from '../src/types/graph.types';
+import type { ChatEvent, StepResult } from '../src/types/graph.types';
 import { createGraph } from '../src/graph';
 import { END, START } from '../src';
+import { State } from '../src/types/state.types';
 
 /**
  * Interactive demo of the chat flow engine
