@@ -1,5 +1,4 @@
 import type {
-  State,
   ChatEvent,
   StepResult,
   ValidationResult,
@@ -9,14 +8,22 @@ import type {
   RunnableNodeAction,
   RunnableNodeValidate,
   Graph,
-  ExtractNodeIds,
   Runnable,
   Edge,
   Edges,
   Tracker,
-} from './types';
+} from './types/graph.types';
 
 import { START, END } from './constants';
+import { State } from './types/state.types';
+
+/**
+ * TODO :
+ * better state management with strong types ( generics ) maybe moving the state to be in its own class
+ * memory management ( saving previous states ) to allow continuation of the flow even after deleting the instance and recreating it (using an id)
+ * later this memory can be stored in a database or external storage to make the flows stateless
+ *
+ */
 
 /**
  * Flow engine that executes conversation flows with two-phase nodes (action + validation)

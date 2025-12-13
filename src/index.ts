@@ -7,20 +7,6 @@
  * @packageDocumentation
  */
 
-// Export the Flow class and builder
-export { ChatGraph as Flow, createGraph } from './graph';
-
-// Export all types
-export type {
-  State,
-  ChatEvent,
-  StepResult,
-  ActionResult,
-  ValidationResult,
-  Node,
-  NodeAction,
-  NodeValidate,
-} from './types';
-
-// Export constants
+export { ChatGraph, createGraph } from './graph';
+export type * from './types/graph.types';
 export { START, END } from './constants';

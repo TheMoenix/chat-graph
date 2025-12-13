@@ -1,5 +1,5 @@
 import { createGraph, START, END } from '../src';
-import type { State } from '../src';
+import { State } from '../src/types/state.types';
 
 describe('Integration Tests', () => {
   describe('Complete Onboarding Flow', () => {

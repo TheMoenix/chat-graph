@@ -1,5 +1,5 @@
 import * as readline from 'readline';
-import type { ChatEvent, State, StepResult } from '../src/types';
+import type { ChatEvent, State, StepResult } from '../src/types/graph.types';
 import { createGraph } from '../src/graph';
 import { END, START } from '../src';
 

@@ -1,4 +1,5 @@
-import { START, END } from './constants';
+import { START, END } from '../constants';
+import { State } from './state.types';
 
 export type Tracker<Nodes extends readonly NodeId[]> = {
   /** Current node ID in the flow */
@@ -12,11 +13,6 @@ export type Tracker<Nodes extends readonly NodeId[]> = {
   /** Flow identifier */
   __isDone: boolean;
 };
-
-/**
- * Represents the state of a conversation flow
- */
-export type State<T = Record<string, any>> = { /** Flow-specific data */ } & T;
 
 /**
  * Event representing user input or system triggers

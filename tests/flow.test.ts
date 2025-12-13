@@ -1,6 +1,7 @@
 import { createGraph } from '../src/graph';
 import { START, END } from '../src/constants';
-import type { State, ChatEvent } from '../src/types';
+import type { ChatEvent } from '../src/types/graph.types';
+import { State } from '../src/types/state.types';
 
 describe('Flow', () => {
   describe('Basic Node Operations', () => {
