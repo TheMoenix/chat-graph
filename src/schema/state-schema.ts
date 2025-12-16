@@ -196,11 +196,4 @@ export function mergeState<S extends StateSchema>(
   return mergedState as z.infer<S>;
 }
 
-/**
- * Create a new state registry
- */
-// export function createRegistry(): StateRegistry {
-//   return new StateRegistry();
-// }
-
 export const registry = new StateRegistry();

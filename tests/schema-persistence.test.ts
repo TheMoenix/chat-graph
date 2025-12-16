@@ -1,11 +1,12 @@
 /**
- * Tests for Zod-based state management and persistence
+ * Comprehensive tests for chat-graph library
+ * Testing all combinations of: graph creation, state, edges, actions, validation
  */
 
 import { describe, it, expect, beforeEach } from '@jest/globals';
 import {
-  createGraph,
-  StateGraph,
+  ChatGraph,
+  ChatGraphBuilder,
   START,
   END,
   StateSchema,
@@ -14,8 +15,11 @@ import {
   StateManager,
   createInitialState,
   mergeState,
+  createRegistry,
+  StateRegistry,
   registry,
   z,
+  ChatEvent,
 } from '../src';
 
 describe('Zod State Schema', () => {

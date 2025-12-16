@@ -7,7 +7,7 @@
  * @packageDocumentation
  */
 
-export { ChatGraph } from './graph';
+export { ChatGraph, ChatGraphBuilder } from './graph';
 export type * from './types/graph.types';
 export { START, END } from './constants';
 
