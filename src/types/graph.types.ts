@@ -72,7 +72,7 @@ export type RunnableNodeValidate = (
 ) => ValidationResult | Promise<ValidationResult>;
 
 export type StaticNodeValidate = {
-  rules: readonly { regex: string; errorMessage: string }[];
+  rules?: readonly { regex: string; errorMessage: string }[];
   /** Field name to store validated input in state */
   targetField?: string | null;
 };
