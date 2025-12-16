@@ -1,6 +1,5 @@
 import type {
   ChatEvent,
-  StepResult,
   ValidationResult,
   Node,
   NodeAction,
@@ -15,7 +14,6 @@ import type {
 } from './types/graph.types';
 
 import { START, END } from './constants';
-import { State } from './types/state.types';
 import {
   StateSchema,
   InferState,
@@ -47,14 +45,13 @@ import { StorageAdapter } from './persistence/storage-adapter';
  * ```
  */
 export class ChatGraph<
-  Nodes extends readonly Node[] = readonly [],
-  S extends State = {},
   Schema extends StateSchema = any,
+  Nodes extends readonly Node<Schema>[] = readonly [],
 > {
-  private nodes: Node<Runnable>[] = [];
+  private nodes: Node<Schema, Runnable>[] = [];
   private readonly edges: Edges<Nodes, true> = new Map();
   declare private tracker: Tracker<Nodes>;
-  declare private graphState: State<S>;
+  declare private graphState: InferState<Schema>;
   private schema?: Schema;
   private registry?: StateRegistry;
   private stateManager?: StateManager<Schema>;
@@ -62,17 +59,15 @@ export class ChatGraph<
   private autoSave: boolean = false;
 
   constructor(
-    config: Graph<Nodes, false, S> & {
+    config: Graph<Nodes, false> & {
       schema?: Schema;
       registry?: StateRegistry;
-      flowId?: string;
       storageAdapter?: StorageAdapter;
       autoSave?: boolean;
     }
   ) {
     this.schema = config.schema;
     this.registry = config.registry;
-    this.flowId = config.flowId;
     this.autoSave = config.autoSave !== undefined ? config.autoSave : true;
 
     // Initialize state manager if flowId is provided
@@ -100,7 +95,7 @@ export class ChatGraph<
       this.schema,
       this.registry,
       config.initialState as any
-    ) as State<S>;
+    );
   }
   /** Current conversation state */
   get state() {
@@ -115,7 +110,9 @@ export class ChatGraph<
   /**
    * Processes nodes to convert config-based definitions to executable functions
    */
-  private processNodes(nodes: readonly Node[]): Node<Runnable>[] {
+  private processNodes(
+    nodes: readonly Node<Schema>[]
+  ): Node<Schema, Runnable>[] {
     return nodes.map((node) => {
       if (node.noUserInput)
         return {
@@ -147,21 +144,25 @@ export class ChatGraph<
   /**
    * Creates an action function from config
    */
-  private createAction(action: NodeAction): RunnableNodeAction {
+  private createAction(action: NodeAction<Schema>): RunnableNodeAction<Schema> {
     if (typeof action === 'function') {
       return action;
     }
 
-    // Simple message object
-    return (state: State) => ({
-      messages: [this.interpolate(action.message, state)],
-    });
+    // Simple message object - returns state update with messages
+    // Only return new message - reducer will handle concatenation
+    return (state: InferState<Schema>): Partial<InferState<Schema>> =>
+      ({
+        messages: [this.interpolate(action.message, state)],
+      }) as any; // Partial<InferState<Schema>>
   }
 
   /**
    * Creates a validation function from config
    */
-  private createValidate(validate: NodeValidate): RunnableNodeValidate {
+  private createValidate(
+    validate: NodeValidate<Schema>
+  ): RunnableNodeValidate<Schema> {
     if (typeof validate === 'function') {
       return validate;
     }
@@ -173,7 +174,10 @@ export class ChatGraph<
         ? validate.rules
         : [validate.rules];
 
-    return (_: State, event: ChatEvent): ValidationResult => {
+    return (
+      _: InferState<Schema>,
+      event: ChatEvent
+    ): ValidationResult<Schema> => {
       const input = event.user_message || '';
 
       // Run all validators
@@ -195,7 +199,7 @@ export class ChatGraph<
 
       return {
         isValid: true,
-        state: updates,
+        state: updates as Partial<InferState<Schema>>,
       };
     };
   }
@@ -203,33 +207,37 @@ export class ChatGraph<
   /**
    * Interpolates variables in text using {key} syntax
    */
-  private interpolate(text: string, state: State): string {
-    return text.replace(/\{(\w+)\}/g, (_, key) => state[key] || '');
+  private interpolate(text: string, state: InferState<Schema>): string {
+    return text.replace(
+      /\{\{(\w+)\}\}/g,
+      (_, key) => (state as any)[key] || ''
+    );
   }
 
   /**
    * Compiles and executes the flow recursively until waiting for user input
    *
    * @param event - User input event
-   * @returns Step result with updated state and messages
+   * @returns The updated state
    */
-  async invoke(event: ChatEvent): Promise<StepResult> {
+  async invoke(event: ChatEvent): Promise<InferState<Schema>> {
     if (this.flowId && this.stateManager) {
       const snapshot = await this.stateManager.load(this.flowId);
       if (snapshot) {
-        this.graphState = snapshot.state as State<S>;
+        this.graphState = snapshot.state;
         this.tracker = snapshot.tracker as Tracker<Nodes>;
       }
     }
 
-    return this.subInvoke(event);
+    await this.subInvoke(event);
+    return this.graphState;
   }
 
-  private async subInvoke(event: ChatEvent): Promise<StepResult> {
+  private async subInvoke(event: ChatEvent): Promise<void> {
     if (this.tracker.__currentNodeId === START) {
       await this.getNextNode();
     }
-    const result = await this.executeNode(event);
+    await this.executeNode(event);
 
     // If both phases complete (action taken + validated), move to next node
     if (this.tracker.__isActionTaken && this.tracker.__isResponseValid) {
@@ -238,7 +246,7 @@ export class ChatGraph<
       // Check if flow is done
       if (this.tracker.__currentNodeId === END) {
         this.tracker.__isDone = true;
-        return result;
+        return;
       }
 
       this.tracker = {
@@ -247,58 +255,46 @@ export class ChatGraph<
         __isResponseValid: false,
       };
 
-      const nextResult = await this.subInvoke(event);
-      return {
-        ...result,
-        messages: [...result.messages, ...nextResult.messages],
-      };
+      await this.subInvoke(event);
     }
-
-    return result;
   }
 
   /**
    * Executes a single node (one phase: action or validation)
    */
-  private async executeNode(event: ChatEvent): Promise<StepResult> {
-    // await this.getNextNode(state);
+  private async executeNode(event: ChatEvent): Promise<void> {
     const node = this.nodes.find((n) => n.id === this.tracker.__currentNodeId);
 
     if (!node) {
       console.warn(`Node not found: ${this.tracker.__currentNodeId}`);
-      return {
-        messages: [],
-      };
+      return;
     }
 
     if (!this.tracker.__isActionTaken) {
-      return this.executeNodeAction(node, event);
+      await this.executeNodeAction(node, event);
     } else if (!this.tracker.__isResponseValid && node.validate) {
-      return this.executeNodeValidation(node, event);
+      await this.executeNodeValidation(node, event);
     } else if (!node.validate) {
       this.tracker.__isResponseValid = true;
     }
-    return {
-      messages: [],
-    };
   }
 
   private async executeNodeAction(
-    node: Node<Runnable>,
+    node: Node<Schema, Runnable>,
     event: ChatEvent
-  ): Promise<StepResult> {
-    const actionResult = await node.action(this.graphState, event);
+  ): Promise<void> {
+    const stateUpdate = await node.action(this.graphState, event);
     this.tracker.__isActionTaken = true;
 
     // Merge state using schema reducers if available
-    if (actionResult.state) {
+    if (stateUpdate) {
       // Apply state update with reducers (no runtime validation)
       this.graphState = mergeState(
         this.schema,
         this.registry,
-        this.graphState as any,
-        actionResult.state as any
-      ) as State<S>;
+        this.graphState,
+        stateUpdate
+      );
     }
 
     if (node.noUserInput) {
@@ -307,28 +303,18 @@ export class ChatGraph<
 
     // Auto-save snapshot if enabled
     if (this.autoSave && this.flowId && this.stateManager) {
-      await this.stateManager.save(
-        this.flowId,
-        this.graphState as InferState<Schema>,
-        this.tracker
-      );
+      await this.stateManager.save(this.flowId, this.graphState, this.tracker);
     }
-
-    return {
-      messages: actionResult.messages || [],
-    };
   }
 
   private async executeNodeValidation(
-    node: Node<Runnable>,
+    node: Node<Schema, Runnable>,
     event: ChatEvent
-  ): Promise<StepResult> {
+  ): Promise<void> {
     if (!node.validate) {
       // No validation needed, mark as valid
       this.tracker.__isResponseValid = true;
-      return {
-        messages: [],
-      };
+      return;
     }
 
     const validationResult = await node.validate(this.graphState, event);
@@ -339,17 +325,23 @@ export class ChatGraph<
       this.graphState = mergeState(
         this.schema,
         this.registry,
-        this.graphState as any,
-        validationResult.state as any
-      ) as State<S>;
+        this.graphState,
+        validationResult.state
+      );
     }
 
     if (!validationResult.isValid) {
-      return {
-        messages: validationResult.errorMessage
-          ? [validationResult.errorMessage]
-          : [],
-      };
+      // Add error message to state messages if validation failed
+      if (validationResult.errorMessage) {
+        this.graphState = mergeState(
+          this.schema,
+          this.registry,
+          this.graphState,
+          {
+            messages: [validationResult.errorMessage],
+          } as any // Partial<InferState<Schema>>
+        );
+      }
     } else {
       // Validation passed
       this.tracker.__isResponseValid = true;
@@ -358,14 +350,10 @@ export class ChatGraph<
       if (this.autoSave && this.flowId && this.stateManager) {
         await this.stateManager.save(
           this.flowId,
-          this.graphState as InferState<Schema>,
+          this.graphState,
           this.tracker
         );
       }
-
-      return {
-        messages: [],
-      };
     }
   }
 
@@ -400,7 +388,7 @@ export class ChatGraph<
       return false;
     }
 
-    this.graphState = snapshot.state as State<S>;
+    this.graphState = snapshot.state;
     this.tracker = snapshot.tracker as Tracker<Nodes>;
     return true;
   }
@@ -424,7 +412,7 @@ export class ChatGraph<
     }
     return await this.stateManager.save(
       this.flowId,
-      this.graphState as InferState<Schema>,
+      this.graphState,
       this.tracker
     );
   }
@@ -445,97 +433,6 @@ export class ChatGraph<
   getStateManager(): StateManager<Schema> | undefined {
     return this.stateManager;
   }
-}
-
-/**
- * Builder class for constructing ChatGraph instances
- *
- * @example
- * ```typescript
- * const flow = createGraph()
- *   .addNode({
- *     id: 'greet',
- *     action: { message: "Hi! What's your name?" },
- *     validate: {
- *       rules: [{ regex: '\\w+', errorMessage: 'Please enter a valid name.' }],
- *       targetField: 'name',
- *     },
- *   })
- *   .addNode({
- *     id: 'welcome',
- *     action: { message: "Nice to meet you, {{name}}!" },
- *   })
- *   .addEdge(START, 'greet')
- *   .addEdge('greet', 'welcome')
- *   .addEdge('welcome', END)
- *   .build({ id: 'onboarding' });
- *
- * const state : State = {};
- * const event: ChatEvent = { user_message: "Alice" };
- * const result = await flow.invoke(event, state);
- * console.log(result);
- * // Output:
- * // {
- * //   state: { name: 'Alice' },
- * //   messages: [ "Nice to meet you, Alice!" ],
- * //   done: true
- * // }
- * ```
- */
-export class ChatGraphBuilder<Nodes extends Node[] = []> {
-  private nodes: Node[] = [];
-  private edges: Edges<Nodes> = [];
-
-  /**
-   * Adds a node to the graph
-   *
-   * @param node - Node configuration
-   * @returns The flow instance for chaining
-   */
-  addNode<const NewNode extends Node>(
-    node: NewNode
-  ): ChatGraphBuilder<[...Nodes, NewNode]> {
-    this.nodes.push(node);
-    return this as any; // Type assertion needed for generics accumulation
-  }
-
-  /**
-   * Adds a directed edge from one node to another
-   *
-   * @param from - Source node ID or "__START__"
-   * @param to - Target node ID or "__END__"
-   * @returns The flow instance for chaining
-   */
-  addEdge(from: Edge<Nodes>['from'], to: Edge<Nodes>['to']): this {
-    this.edges.push({ from, to });
-    return this;
-  }
-
-  /**
-   * Builds the chat graph
-   *
-   * @param config - Graph configuration with optional schema and persistence options
-   * @returns The constructed ChatGraph instance
-   */
-  build<Schema extends StateSchema = any>(config: {
-    id: string;
-    schema?: Schema;
-    registry?: StateRegistry;
-    flowId?: string;
-    storageAdapter?: StorageAdapter;
-    autoSave?: boolean;
-  }): ChatGraph<Nodes, any, Schema> {
-    return new ChatGraph({
-      ...config,
-      nodes: this.nodes as unknown as Nodes,
-      edges: this.edges,
-    });
-  }
-}
-
-/** Helper function to create a new chat graph builder */
-export function createGraph() {
-  return new ChatGraphBuilder();
 }
 
 /**
@@ -567,47 +464,47 @@ export function createGraph() {
  *   .compile({ id: "my-workflow" });
  * ```
  */
-export class StateGraph<Schema extends StateSchema> {
+export class ChatGraphBuilder<
+  Schema extends StateSchema,
+  Nodes extends Node<Schema>[] = [],
+> {
   private schema: Schema;
   private registry: StateRegistry;
-  private nodes: Node[] = [];
-  private edges: Array<{ from: string; to: string }> = [];
+  private nodes: Node<Schema>[] = [];
+  private edges: Edges<Nodes> = [];
 
-  constructor(schema: Schema, StateRegistry?: StateRegistry) {
+  constructor({
+    schema,
+    registry: StateRegistry,
+  }: {
+    schema: Schema;
+    registry?: StateRegistry;
+  }) {
     this.schema = schema;
     this.registry = StateRegistry || registry;
   }
 
   /**
-   * Add a node with an action function
+   * Adds a node to the graph
+   *
+   * @param node - Node configuration
+   * @returns The flow instance for chaining
    */
-  addNode(
-    id: string,
-    action: (
-      state: InferState<Schema>
-    ) => Partial<InferState<Schema>> | Promise<Partial<InferState<Schema>>>
-  ): this {
-    const wrappedAction: RunnableNodeAction = async (state, event) => {
-      const result = await action(state as InferState<Schema>);
-      return {
-        state: result,
-        messages: [],
-      };
-    };
-
-    this.nodes.push({
-      id,
-      action: wrappedAction,
-      noUserInput: true,
-    });
-
-    return this;
+  addNode<const NewNode extends Node<Schema>>(
+    node: NewNode
+  ): ChatGraphBuilder<Schema, [...Nodes, NewNode]> {
+    this.nodes.push(node);
+    return this as any; // Type assertion needed for generics accumulation
   }
 
   /**
-   * Add an edge between two nodes
+   * Adds a directed edge from one node to another
+   *
+   * @param from - Source node ID or "__START__"
+   * @param to - Target node ID or "__END__"
+   * @returns The flow instance for chaining
    */
-  addEdge(from: string, to: string): this {
+  addEdge(from: Edge<Nodes>['from'], to: Edge<Nodes>['to']): this {
     this.edges.push({ from, to });
     return this;
   }
@@ -621,7 +518,7 @@ export class StateGraph<Schema extends StateSchema> {
     storageAdapter?: StorageAdapter;
     autoSave?: boolean;
     initialState?: Partial<InferState<Schema>>;
-  }): ChatGraph<any, any, Schema> {
+  }): ChatGraph<Schema> {
     return new ChatGraph({
       ...config,
       schema: this.schema,

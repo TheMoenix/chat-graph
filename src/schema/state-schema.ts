@@ -98,9 +98,12 @@ declare module 'zod' {
 }
 
 /**
- * State schema type - a Zod object schema
+ * State schema type - a Zod object schema that must include messages field
  */
-export type StateSchema = z.ZodObject<any>;
+export type StateSchema = z.ZodObject<{
+  messages: z.ZodArray<z.ZodString>;
+  [key: string]: z.ZodTypeAny;
+}>;
 
 /**
  * Infer the TypeScript type from a Zod state schema

@@ -1,5 +1,5 @@
 import { START, END } from '../constants';
-import { State } from './state.types';
+import { InferState, StateSchema } from '../schema/state-schema';
 
 export type Tracker<Nodes extends readonly NodeId[]> = {
   /** Current node ID in the flow */
@@ -22,54 +22,39 @@ export type ChatEvent = {
 };
 
 /**
- * Result of executing a step in the flow
- */
-export type StepResult = {
-  /** Messages to send to the user */
-  messages: string[];
-};
-
-/**
- * Result of executing a node's action phase
- */
-export type ActionResult = {
-  /** Messages to send to user */
-  messages?: string[];
-  /** State updates to apply */
-  state?: Partial<State>;
-};
-
-/**
  * Result of validating user input
  */
-export type ValidationResult = {
+export type ValidationResult<Schema extends StateSchema = any> = {
   /** Whether validation passed */
   isValid: boolean;
   /** Error message to show if validation failed */
   errorMessage?: string;
   /** State updates to apply if validation passed */
-  state?: Partial<State>;
+  state?: Partial<InferState<Schema>>;
 };
 
 export type Runnable = true;
 
-export type RunnableNodeAction = (
-  state: State,
+export type RunnableNodeAction<Schema extends StateSchema> = (
+  state: InferState<Schema>,
   event: ChatEvent
-) => ActionResult | Promise<ActionResult>;
+) => Partial<InferState<Schema>> | Promise<Partial<InferState<Schema>>>;
 
 type StaticNodeAction = {
   message: string;
 };
 
-export type NodeAction<Runnable extends boolean = false> = Runnable extends true
-  ? RunnableNodeAction
-  : RunnableNodeAction | StaticNodeAction;
+export type NodeAction<
+  Schema extends StateSchema,
+  Runnable extends boolean = false,
+> = Runnable extends true
+  ? RunnableNodeAction<Schema>
+  : RunnableNodeAction<Schema> | StaticNodeAction;
 
-export type RunnableNodeValidate = (
-  state: State,
+export type RunnableNodeValidate<Schema extends StateSchema = any> = (
+  state: InferState<Schema>,
   event: ChatEvent
-) => ValidationResult | Promise<ValidationResult>;
+) => ValidationResult<Schema> | Promise<ValidationResult<Schema>>;
 
 export type StaticNodeValidate = {
   rules?: readonly { regex: string; errorMessage: string }[];
@@ -77,22 +62,27 @@ export type StaticNodeValidate = {
   targetField?: string | null;
 };
 
-export type NodeValidate<Runnable extends boolean = false> =
-  Runnable extends true
-    ? RunnableNodeValidate
-    : RunnableNodeValidate | StaticNodeValidate;
+export type NodeValidate<
+  Schema extends StateSchema = any,
+  Runnable extends boolean = false,
+> = Runnable extends true
+  ? RunnableNodeValidate<Schema>
+  : RunnableNodeValidate<Schema> | StaticNodeValidate;
 
 type NodeId = {
   id: string;
 };
 
-type NodeBase<Runnable extends boolean> = NodeId & {
+type NodeBase<Schema extends StateSchema, Runnable extends boolean> = NodeId & {
   /** This is for executing the node's main action, like asking the user a question */
-  action: NodeAction<Runnable>;
+  action: NodeAction<Schema, Runnable>;
 };
 
 /** When user input is expected */
-type NodeWithUserInput<Runnable extends boolean> = NodeBase<Runnable> & {
+type NodeWithUserInput<
+  Schema extends StateSchema,
+  Runnable extends boolean,
+> = NodeBase<Schema, Runnable> & {
   /**
    * Indicates that no user input is expected for this node
    * When this is true, after the action is executed, the flow moves to the next node automatically
@@ -106,11 +96,14 @@ type NodeWithUserInput<Runnable extends boolean> = NodeBase<Runnable> & {
    * Note: You can't have validate if noUserInput is true
    * @optional
    */
-  validate?: NodeValidate<Runnable> | null;
+  validate?: NodeValidate<Schema, Runnable> | null;
 };
 
 /** When this is true, the node does not expect user input */
-type NodeWithoutUserInput<Runnable extends boolean> = NodeBase<Runnable> & {
+type NodeWithoutUserInput<
+  Schema extends StateSchema,
+  Runnable extends boolean,
+> = NodeBase<Schema, Runnable> & {
   /**
    * Indicates that no user input is expected for this node
    * When this is true, after the action is executed, the flow moves to the next node automatically
@@ -128,16 +121,20 @@ type NodeWithoutUserInput<Runnable extends boolean> = NodeBase<Runnable> & {
 /**
  * Public node definition with flexible action and validation types
  */
-export type Node<Runnable extends boolean = false> =
-  | NodeWithUserInput<Runnable>
-  | NodeWithoutUserInput<Runnable>;
+export type Node<
+  Schema extends StateSchema,
+  Runnable extends boolean = false,
+> =
+  | NodeWithUserInput<Schema, Runnable>
+  | NodeWithoutUserInput<Schema, Runnable>;
 
 export type ExtractNodeIds<Nodes extends readonly NodeId[]> =
   Nodes[number]['id'];
 
-type RouterNode<Nodes extends readonly NodeId[]> = (
-  state: State
-) => Nodes[number]['id'] | typeof END;
+type RouterNode<
+  Nodes extends readonly NodeId[],
+  Schema extends StateSchema = any,
+> = (state: InferState<Schema>) => Nodes[number]['id'] | typeof END;
 
 type EdgeFrom<Nodes extends readonly NodeId[]> =
   | ExtractNodeIds<Nodes>
@@ -166,14 +163,14 @@ export type Edges<
 > = RunnableMap extends false ? EdgesArray<Nodes> : EdgesMap<Nodes>;
 
 export type Graph<
-  Nodes extends readonly Node<R>[],
+  Nodes extends readonly Node<Schema, R>[],
   R extends boolean = false,
-  S extends State = {},
+  Schema extends StateSchema = any,
 > = {
   id: string;
   nodes: Nodes;
   edges: Edges<Nodes, R>;
-  initialState?: S;
+  initialState?: InferState<Schema>;
 };
 
 type HasDuplicates<
