@@ -55,7 +55,7 @@ export class ChatGraph<
   private schema?: Schema;
   private registry?: StateRegistry;
   private stateManager?: StateManager<Schema>;
-  private flowId?: string;
+  private id: string;
   private autoSave: boolean = false;
 
   constructor(
@@ -69,9 +69,10 @@ export class ChatGraph<
     this.schema = config.schema;
     this.registry = config.registry;
     this.autoSave = config.autoSave !== undefined ? config.autoSave : true;
+    this.id = config.id;
 
-    // Initialize state manager if flowId is provided
-    if (this.flowId) {
+    // Initialize state manager if storageAdapter is provided
+    if (config.storageAdapter) {
       this.stateManager = new StateManager<Schema>(config.storageAdapter);
     }
 
@@ -221,8 +222,8 @@ export class ChatGraph<
    * @returns The updated state
    */
   async invoke(event: ChatEvent): Promise<InferState<Schema>> {
-    if (this.flowId && this.stateManager) {
-      const snapshot = await this.stateManager.load(this.flowId);
+    if (this.stateManager) {
+      const snapshot = await this.stateManager.load(this.id);
       if (snapshot) {
         this.graphState = snapshot.state;
         this.tracker = snapshot.tracker as Tracker<Nodes>;
@@ -302,8 +303,8 @@ export class ChatGraph<
     }
 
     // Auto-save snapshot if enabled
-    if (this.autoSave && this.flowId && this.stateManager) {
-      await this.stateManager.save(this.flowId, this.graphState, this.tracker);
+    if (this.autoSave && this.stateManager) {
+      await this.stateManager.save(this.id, this.graphState, this.tracker);
     }
   }
 
@@ -347,12 +348,8 @@ export class ChatGraph<
       this.tracker.__isResponseValid = true;
 
       // Auto-save snapshot if enabled
-      if (this.autoSave && this.flowId && this.stateManager) {
-        await this.stateManager.save(
-          this.flowId,
-          this.graphState,
-          this.tracker
-        );
+      if (this.autoSave && this.stateManager) {
+        await this.stateManager.save(this.id, this.graphState, this.tracker);
       }
     }
   }
@@ -378,12 +375,12 @@ export class ChatGraph<
    * @param version Optional version to restore (defaults to latest)
    */
   async restoreFromSnapshot(version?: number): Promise<boolean> {
-    if (!this.flowId || !this.stateManager) {
-      console.warn('Cannot restore: flowId or stateManager not configured');
+    if (!this.stateManager) {
+      console.warn('Cannot restore: stateManager not configured');
       return false;
     }
 
-    const snapshot = await this.stateManager.load(this.flowId, version);
+    const snapshot = await this.stateManager.load(this.id, version);
     if (!snapshot) {
       return false;
     }
@@ -397,34 +394,30 @@ export class ChatGraph<
    * Get the complete history of snapshots for this flow
    */
   async getSnapshotHistory(limit?: number) {
-    if (!this.flowId || !this.stateManager) {
+    if (!this.stateManager) {
       return [];
     }
-    return await this.stateManager.getHistory(this.flowId, limit);
+    return await this.stateManager.getHistory(this.id, limit);
   }
 
   /**
    * Manually save a snapshot
    */
   async saveSnapshot(): Promise<number | null> {
-    if (!this.flowId || !this.stateManager) {
+    if (!this.stateManager) {
       return null;
     }
-    return await this.stateManager.save(
-      this.flowId,
-      this.graphState,
-      this.tracker
-    );
+    return await this.stateManager.save(this.id, this.graphState, this.tracker);
   }
 
   /**
    * Delete all snapshots for this flow
    */
   async deleteSnapshots(): Promise<void> {
-    if (!this.flowId || !this.stateManager) {
+    if (!this.stateManager) {
       return;
     }
-    await this.stateManager.delete(this.flowId);
+    await this.stateManager.delete(this.id);
   }
 
   /**
@@ -514,7 +507,6 @@ export class ChatGraphBuilder<
    */
   compile(config: {
     id: string;
-    flowId?: string;
     storageAdapter?: StorageAdapter;
     autoSave?: boolean;
     initialState?: Partial<InferState<Schema>>;
