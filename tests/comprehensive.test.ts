@@ -16,9 +16,9 @@ import {
   END,
   InferState,
   registry,
-  z,
   ChatEvent,
 } from '../src';
+import { z } from 'zod';
 
 describe('Graph Creation Methods', () => {
   describe('Builder Pattern', () => {
