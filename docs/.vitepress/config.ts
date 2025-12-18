@@ -1,6 +1,4 @@
-import { defineConfig } from 'vitepress';
-
-export default defineConfig({
+export default {
   title: 'chat-graph',
   description: 'A type-safe conversational flow engine',
   // IMPORTANT: set base for GitHub Pages project site
@@ -32,4 +30,4 @@ export default defineConfig({
       { icon: 'github', link: 'https://github.com/TheMoenix/chat-graph' },
     ],
   },
-});
+};
