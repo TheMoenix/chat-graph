@@ -35,3 +35,4 @@ logs/
 # Temp files
 tmp/
 temp/
+.npmrc
