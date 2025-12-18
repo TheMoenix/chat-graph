@@ -6,9 +6,9 @@ import {
   registry,
   START,
   StorageAdapter,
-  z,
 } from '../src';
-import { ChatGraph, ChatGraphBuilder } from '../src/graph';
+import { ChatGraphBuilder } from '../src/graph';
+import { z } from 'zod';
 
 /**
  * Interactive demo of the chat flow engine

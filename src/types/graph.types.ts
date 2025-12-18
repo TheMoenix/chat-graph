@@ -1,4 +1,4 @@
-import { z } from '..';
+import { z } from 'zod';
 import { START, END } from '../constants';
 import { InferState, StateSchema } from '../schema/state-schema';
 

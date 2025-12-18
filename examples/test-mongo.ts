@@ -1,9 +1,10 @@
 import { MongoStorageAdapter } from '../src/persistence/mongo-adapter';
-import { ChatGraphBuilder, START, END, InferState, registry, z } from '../src';
+import { ChatGraphBuilder, START, END, InferState, registry } from '../src';
+import { z } from 'zod';
 
 /**
  * MongoDB Storage Adapter Test
- * 
+ *
  * Prerequisites:
  * 1. Install mongodb: npm install mongodb
  * 2. Start MongoDB:
@@ -18,7 +19,7 @@ async function testMongoAdapter() {
   // MongoDB configuration
   const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017';
   const database = 'chat_graph_test';
-  
+
   const adapter = new MongoStorageAdapter({
     uri: mongoUri,
     database,
@@ -46,7 +47,7 @@ async function testMongoAdapter() {
         __isDone: false,
       },
     });
-    
+
     const loaded = await adapter.loadSnapshot('test-flow-1');
     console.log('✅ Saved and loaded snapshot:', loaded?.version);
     console.log('   State:', loaded?.state);
@@ -70,7 +71,9 @@ async function testMongoAdapter() {
 
     const history = await adapter.loadHistory('test-flow-1');
     console.log(`✅ Loaded ${history.length} snapshots from history`);
-    history.forEach((s) => console.log(`   v${s.version}: ${JSON.stringify(s.state)}`));
+    history.forEach((s) =>
+      console.log(`   v${s.version}: ${JSON.stringify(s.state)}`)
+    );
     console.log();
 
     // Test 4: Load Specific Version
@@ -99,7 +102,7 @@ async function testMongoAdapter() {
 
     // Test 8: Integration with ChatGraph
     console.log('Test 8: Testing with ChatGraph...');
-    
+
     const WorkflowState = z.object({
       name: z.string().optional(),
       counter: z.number().optional(),
@@ -116,7 +119,9 @@ async function testMongoAdapter() {
         id: 'greet',
         action: { message: "Hi! What's your name?" },
         validate: {
-          rules: [{ regex: '\\w+', errorMessage: 'Please enter a valid name.' }],
+          rules: [
+            { regex: '\\w+', errorMessage: 'Please enter a valid name.' },
+          ],
           targetField: 'name',
         },
       })
@@ -156,7 +161,9 @@ async function testMongoAdapter() {
         id: 'greet',
         action: { message: "Hi! What's your name?" },
         validate: {
-          rules: [{ regex: '\\w+', errorMessage: 'Please enter a valid name.' }],
+          rules: [
+            { regex: '\\w+', errorMessage: 'Please enter a valid name.' },
+          ],
           targetField: 'name',
         },
       })
@@ -194,10 +201,12 @@ async function testMongoAdapter() {
   } catch (error) {
     console.error('\n❌ Test failed:', error);
     console.error('\nTroubleshooting:');
-    console.error('1. Make sure MongoDB is running: docker run -d -p 27017:27017 mongo:latest');
+    console.error(
+      '1. Make sure MongoDB is running: docker run -d -p 27017:27017 mongo:latest'
+    );
     console.error('2. Install mongodb: npm install mongodb');
     console.error('3. Check connection URI:', mongoUri);
-    
+
     if (adapter) {
       await adapter.disconnect().catch(() => {});
     }
