@@ -17,7 +17,7 @@ export interface StateSnapshot<S extends StateSchema = any> {
   /** Timestamp when snapshot was created */
   timestamp: Date;
   /** User-defined state data */
-  state: any;
+  state: InferState<S>;
   /** Internal execution tracker */
   tracker: Tracker<any>;
 }
