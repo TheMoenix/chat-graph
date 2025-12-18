@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2025-12-18
+
+### Added
+
+- Zod-based state schema with reducer support via `StateRegistry` and `registry` singleton
+- `ChatGraphBuilder` with strongly-typed state derived from Zod schemas
+- Pluggable persistence layer with versioned snapshots
+  - `MemoryStorageAdapter` for development/testing
+  - `MongoStorageAdapter` for production (optional `mongodb` peer)
+- `StateManager` with history, restore, prune, and global singleton helpers
+- New examples: interactive builder usage and MongoDB adapter test script
+- Comprehensive MongoDB adapter tests using `mongodb-memory-server`
+
+### Changed
+
+- Public exports consolidated in `src/index.ts` to expose builder, schema helpers, persistence, and `z`
+- Internal types reorganized under `src/types/`
+- Examples and docs updated to schema-first builder and state system
+
+### Breaking
+
+- Removed `createGraph()` in favor of `ChatGraphBuilder`
+- Getting started and persistence usage now pass a Zod schema and use the exported `registry`
+
 ## [0.1.3] - 2025-12-09
 
 ### Added

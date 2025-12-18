@@ -487,7 +487,7 @@ export class ChatGraphBuilder<
     node: NewNode
   ): ChatGraphBuilder<Schema, [...Nodes, NewNode]> {
     this.nodes.push(node);
-    return this as any; // Type assertion needed for generics accumulation
+    return this as any; // ChatGraphBuilder<Schema, [...Nodes, NewNode]>
   }
 
   /**
@@ -510,13 +510,13 @@ export class ChatGraphBuilder<
     storageAdapter?: StorageAdapter;
     autoSave?: boolean;
     initialState?: Partial<InferState<Schema>>;
-  }): ChatGraph<Schema> {
-    return new ChatGraph({
+  }): ChatGraph<Schema, Nodes> {
+    return new ChatGraph<Schema, Nodes>({
       ...config,
       schema: this.schema,
       registry: this.registry,
-      nodes: this.nodes as any,
-      edges: this.edges as any,
-    }) as any;
+      nodes: this.nodes as Nodes,
+      edges: this.edges,
+    });
   }
 }
