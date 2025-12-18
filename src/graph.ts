@@ -429,7 +429,7 @@ export class ChatGraph<
 }
 
 /**
- * StateGraph - LangGraph-style builder with Zod schema
+ * StateGraph - typed builder with Zod schema
  *
  * @example
  * ```typescript
@@ -497,7 +497,7 @@ export class ChatGraphBuilder<
    * @param to - Target node ID or "__END__"
    * @returns The flow instance for chaining
    */
-  addEdge(from: Edge<Nodes>['from'], to: Edge<Nodes>['to']): this {
+  addEdge(from: Edge<Nodes>['from'], to: Edge<Nodes, Schema>['to']): this {
     this.edges.push({ from, to });
     return this;
   }

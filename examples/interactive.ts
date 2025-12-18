@@ -85,7 +85,7 @@ async function demo() {
     })
     .addNode({
       id: 'ask_email',
-      action: (state: InferState<typeof WorkflowState>) => {
+      action: (state) => {
         return {
           messages: [`Nice to meet you, ${state.name}! What's your email?`],
           just_testing: 'yeah',
@@ -103,7 +103,7 @@ async function demo() {
     })
     .addNode({
       id: 'confirm',
-      action: (state: InferState<typeof WorkflowState>) => {
+      action: (state) => {
         return {
           messages: [
             `Thanks ${state.name}! We've recorded your email as ${state.email}.`,
@@ -124,7 +124,7 @@ async function demo() {
     .addEdge(START, 'greet')
     .addEdge('greet', 'ask_email')
     .addEdge('ask_email', 'confirm')
-    .addEdge('confirm', (state: InferState<typeof WorkflowState>) => {
+    .addEdge('confirm', (state) => {
       if (
         state.submit_choice &&
         state.submit_choice.toLowerCase() === 'submit'
@@ -189,7 +189,7 @@ async function demo() {
     .addEdge(START, 'greet')
     .addEdge('greet', 'ask_email')
     .addEdge('ask_email', 'confirm')
-    .addEdge('confirm', (state: InferState<typeof WorkflowState>) => {
+    .addEdge('confirm', (state) => {
       if (
         state.submit_choice &&
         state.submit_choice.toLowerCase() === 'submit'

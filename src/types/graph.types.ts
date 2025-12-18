@@ -140,27 +140,31 @@ type EdgeFrom<Nodes extends readonly NodeId[]> =
   | ExtractNodeIds<Nodes>
   | typeof START;
 
-type EdgeTo<Nodes extends readonly NodeId[]> =
-  | ExtractNodeIds<Nodes>
-  | RouterNode<Nodes>
-  | typeof END;
+type EdgeTo<
+  Nodes extends readonly NodeId[],
+  Schema extends StateSchema = any,
+> = ExtractNodeIds<Nodes> | RouterNode<Nodes, Schema> | typeof END;
 
-export type Edge<Nodes extends readonly NodeId[]> = {
+export type Edge<
+  Nodes extends readonly NodeId[],
+  Schema extends StateSchema = any,
+> = {
   from: EdgeFrom<Nodes>;
-  to: EdgeTo<Nodes>;
+  to: EdgeTo<Nodes, Schema>;
 };
 
 type EdgesArray<Nodes extends readonly NodeId[]> = Edge<Nodes>[];
 
-type EdgesMap<Nodes extends readonly NodeId[]> = Map<
-  EdgeFrom<Nodes>,
-  EdgeTo<Nodes>
->;
+type EdgesMap<
+  Nodes extends readonly NodeId[],
+  Schema extends StateSchema = any,
+> = Map<EdgeFrom<Nodes>, EdgeTo<Nodes, Schema>>;
 
 export type Edges<
   Nodes extends readonly NodeId[],
   RunnableMap extends boolean = false,
-> = RunnableMap extends false ? EdgesArray<Nodes> : EdgesMap<Nodes>;
+  Schema extends StateSchema = any,
+> = RunnableMap extends false ? EdgesArray<Nodes> : EdgesMap<Nodes, Schema>;
 
 export type Graph<
   Nodes extends readonly Node<Schema, R>[],
@@ -169,7 +173,7 @@ export type Graph<
 > = {
   id: string;
   nodes: Nodes;
-  edges: Edges<Nodes, R>;
+  edges: Edges<Nodes, R, Schema>;
   initialState?: InferState<Schema>;
 };
 
