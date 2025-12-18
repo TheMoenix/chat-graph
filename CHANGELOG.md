@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-12-18
+
+### Added
+
+- **JSON-based Conditional Routing**: Edges now support declarative conditional routing via JSON configuration
+  - New `StaticRouter` type for defining routing conditions without functions
+  - Support for 11 comparison operators: `equals`, `not_equals`, `gt`, `gte`, `lt`, `lte`, `contains`, `not_contains`, `regex`, `in`, `not_in`
+  - Type-safe `field` parameter (validated against schema keys) and `goto` parameter (validated against node IDs)
+  - Multiple conditions evaluated in order with first-match semantics
+  - Fallback `default` route when no conditions match
+  - Enables fully JSON-serializable graph definitions for database storage
+- Comprehensive test suite for JSON routing covering all operators and edge cases
+- Full backward compatibility with function-based and string-based routing
+
+### Changed
+
+- `EdgeTo` type now accepts `StaticRouter<Nodes, Schema>` in addition to functions and strings
+- Internal edge processing converts `StaticRouter` objects to executable functions during graph initialization
+
 ## [0.2.5] - 2025-12-18
 
 ### Changed
