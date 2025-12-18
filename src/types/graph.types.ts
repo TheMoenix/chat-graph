@@ -132,6 +132,53 @@ export type Node<
 export type ExtractNodeIds<Nodes extends readonly NodeId[]> =
   Nodes[number]['id'];
 
+/**
+ * Condition operator types for JSON-based routing
+ */
+export type ConditionOperator =
+  | 'equals'
+  | 'not_equals'
+  | 'gt'
+  | 'gte'
+  | 'lt'
+  | 'lte'
+  | 'contains'
+  | 'not_contains'
+  | 'regex'
+  | 'in'
+  | 'not_in';
+
+/**
+ * Single routing condition with type-safe field and goto
+ */
+export type RouterCondition<
+  Nodes extends readonly NodeId[] = readonly NodeId[],
+  Schema extends StateSchema = any,
+> = {
+  /** State field to check (type-safe against schema) */
+  field: keyof InferState<Schema>;
+  /** Comparison operator */
+  operator: ConditionOperator;
+  /** Value to compare against */
+  value: any;
+  /** Node to go to if condition matches (type-safe against node IDs) */
+  goto: ExtractNodeIds<Nodes> | typeof END;
+};
+
+/**
+ * JSON-based static router definition
+ * Evaluates conditions in order and routes to the first match
+ */
+export type StaticRouter<
+  Nodes extends readonly NodeId[] = readonly NodeId[],
+  Schema extends StateSchema = any,
+> = {
+  /** Array of conditions to evaluate in order */
+  conditions: readonly RouterCondition<Nodes, Schema>[];
+  /** Fallback destination if no conditions match */
+  default: ExtractNodeIds<Nodes> | typeof END;
+};
+
 type RouterNode<
   Nodes extends readonly NodeId[],
   Schema extends StateSchema = any,
@@ -142,6 +189,15 @@ type EdgeFrom<Nodes extends readonly NodeId[]> =
   | typeof START;
 
 type EdgeTo<
+  Nodes extends readonly NodeId[],
+  Schema extends StateSchema = any,
+> =
+  | ExtractNodeIds<Nodes>
+  | RouterNode<Nodes, Schema>
+  | StaticRouter<Nodes, Schema>
+  | typeof END;
+
+type RunnableEdgeTo<
   Nodes extends readonly NodeId[],
   Schema extends StateSchema = any,
 > = ExtractNodeIds<Nodes> | RouterNode<Nodes, Schema> | typeof END;
@@ -159,7 +215,7 @@ type EdgesArray<Nodes extends readonly NodeId[]> = Edge<Nodes>[];
 type EdgesMap<
   Nodes extends readonly NodeId[],
   Schema extends StateSchema = any,
-> = Map<EdgeFrom<Nodes>, EdgeTo<Nodes, Schema>>;
+> = Map<EdgeFrom<Nodes>, RunnableEdgeTo<Nodes, Schema>>;
 
 export type Edges<
   Nodes extends readonly NodeId[],

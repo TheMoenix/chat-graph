@@ -11,6 +11,9 @@ import type {
   Edge,
   Edges,
   Tracker,
+  StaticRouter,
+  RouterCondition,
+  ExtractNodeIds,
 } from './types/graph.types';
 
 import { START, END } from './constants';
@@ -136,7 +139,7 @@ export class ChatGraph<
     const edgeMap: Edges<Nodes, true> = new Map();
 
     for (const edge of edges) {
-      edgeMap.set(edge.from, edge.to);
+      edgeMap.set(edge.from, this.createRouter(edge.to));
     }
 
     return edgeMap;
@@ -203,6 +206,98 @@ export class ChatGraph<
         state: updates as Partial<InferState<Schema>>,
       };
     };
+  }
+
+  /**
+   * Creates a router function from config (supports both functions and JSON-based routers)
+   */
+  private createRouter(
+    router:
+      | ExtractNodeIds<Nodes>
+      | ((state: InferState<Schema>) => ExtractNodeIds<Nodes> | typeof END)
+      | StaticRouter<Nodes, Schema>
+      | typeof END
+  ):
+    | ExtractNodeIds<Nodes>
+    | ((state: InferState<Schema>) => ExtractNodeIds<Nodes> | typeof END)
+    | typeof END {
+    // If it's already a function or string/END, return as is
+    if (typeof router === 'function' || typeof router === 'string') {
+      return router;
+    }
+
+    // It's a StaticRouter object - convert to function
+    const staticRouter = router as StaticRouter<Nodes, Schema>;
+    return (state: InferState<Schema>): ExtractNodeIds<Nodes> | typeof END => {
+      // Evaluate conditions in order
+      for (const condition of staticRouter.conditions) {
+        if (this.evaluateCondition(state, condition)) {
+          return condition.goto as ExtractNodeIds<Nodes> | typeof END;
+        }
+      }
+      // No conditions matched, use default
+      return staticRouter.default as ExtractNodeIds<Nodes> | typeof END;
+    };
+  }
+
+  /**
+   * Evaluates a single routing condition against the current state
+   */
+  private evaluateCondition(
+    state: InferState<Schema>,
+    condition: RouterCondition<Nodes, Schema>
+  ): boolean {
+    const fieldValue = (state as any)[condition.field];
+    const { operator, value } = condition;
+
+    switch (operator) {
+      case 'equals':
+        return fieldValue == value;
+      case 'not_equals':
+        return fieldValue != value;
+      case 'gt':
+        return fieldValue > value;
+      case 'gte':
+        return fieldValue >= value;
+      case 'lt':
+        return fieldValue < value;
+      case 'lte':
+        return fieldValue <= value;
+      case 'contains':
+        if (typeof fieldValue === 'string') {
+          return fieldValue.includes(value);
+        }
+        if (Array.isArray(fieldValue)) {
+          return fieldValue.includes(value);
+        }
+        return false;
+      case 'not_contains':
+        if (typeof fieldValue === 'string') {
+          return !fieldValue.includes(value);
+        }
+        if (Array.isArray(fieldValue)) {
+          return !fieldValue.includes(value);
+        }
+        return true;
+      case 'regex':
+        if (typeof fieldValue === 'string') {
+          const regex = new RegExp(value);
+          return regex.test(fieldValue);
+        }
+        return false;
+      case 'in':
+        if (Array.isArray(value)) {
+          return value.includes(fieldValue);
+        }
+        return false;
+      case 'not_in':
+        if (Array.isArray(value)) {
+          return !value.includes(fieldValue);
+        }
+        return true;
+      default:
+        return false;
+    }
   }
 
   /**
