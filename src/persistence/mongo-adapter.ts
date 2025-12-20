@@ -88,18 +88,16 @@ export class MongoStorageAdapter extends StorageAdapter {
     }
   }
 
-  private ensureConnected(): void {
+  private async ensureConnected(): Promise<void> {
     if (!this.isConnected || !this.collection) {
-      throw new Error(
-        'MongoStorageAdapter is not connected. Call connect() first.'
-      );
+      await this.connect();
     }
   }
 
   async saveSnapshot<S extends StateSchema>(
     snapshot: StateSnapshot<S>
   ): Promise<void> {
-    this.ensureConnected();
+    await this.ensureConnected();
 
     await this.collection!.insertOne({
       ...snapshot,
@@ -112,7 +110,7 @@ export class MongoStorageAdapter extends StorageAdapter {
     flowId: string,
     version?: number
   ): Promise<StateSnapshot<S> | null> {
-    this.ensureConnected();
+    await this.ensureConnected();
 
     let query: any = { flowId };
 
@@ -138,7 +136,7 @@ export class MongoStorageAdapter extends StorageAdapter {
     flowId: string,
     limit?: number
   ): Promise<StateSnapshot<S>[]> {
-    this.ensureConnected();
+    await this.ensureConnected();
 
     const cursor = this.collection!.find(
       { flowId },
@@ -157,13 +155,13 @@ export class MongoStorageAdapter extends StorageAdapter {
   }
 
   async deleteFlow(flowId: string): Promise<void> {
-    this.ensureConnected();
+    await this.ensureConnected();
 
     await this.collection!.deleteMany({ flowId });
   }
 
   async pruneHistory(flowId: string, keepLast: number): Promise<void> {
-    this.ensureConnected();
+    await this.ensureConnected();
 
     // Find all versions for this flow, sorted by version descending
     const snapshots = await this.collection!.find(
@@ -189,13 +187,13 @@ export class MongoStorageAdapter extends StorageAdapter {
   }
 
   async getSnapshotCount(flowId: string): Promise<number> {
-    this.ensureConnected();
+    await this.ensureConnected();
 
     return await this.collection!.countDocuments({ flowId });
   }
 
   async flowExists(flowId: string): Promise<boolean> {
-    this.ensureConnected();
+    await this.ensureConnected();
 
     const count = await this.collection!.countDocuments(
       { flowId },
