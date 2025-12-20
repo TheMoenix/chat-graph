@@ -1,6 +1,6 @@
 {
   "name": "chat-graph",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "A code-first chat flow engine to handle chatbot conversations using a graph structure with action and validation phases",
   "keywords": [
     "chatgraph",
