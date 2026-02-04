@@ -20,11 +20,13 @@ export default {
           text: 'Building',
           items: [
             {
-              Node: [
+              text: 'Node',
+              items: [
                 { text: 'Action', link: '/guide/building/node/action' },
                 { text: 'Validate', link: '/guide/building/node/validate' },
               ],
             },
+
             { text: 'Edge', link: '/guide/building/edge' },
           ],
         },
