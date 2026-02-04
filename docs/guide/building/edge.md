@@ -1,6 +1,7 @@
 # Edge
 
 Connect nodes in sequence or branch conditionally.
+Use `START` and `END` for graph boundaries.
 
 ## Basics
 
@@ -22,21 +23,28 @@ Use a function to determine the next node based on state:
 
 ```typescript
 // Conditional routing with function
-.addEdge('choose', (state) => (state.isAdmin ? 'admin' : 'user'))
+.addEdge('choose', (state) => (state.isAdmin ? 'admin_node' : 'user_node'))
 ```
 
 ## JSON-based Routing
 
-Define conditional routing using JSON configuration for fully serializable graphs:
+Define conditional routing using JSON configuration for fully serializable graphs
+
+- conditions:
+  - field: state field to check
+  - operator: comparison operator (see below)
+  - value: value to compare against
+  - goto: target node id if condition matches
+- default: target node id if all conditions fail
 
 ```typescript
 // JSON-based conditional routing
 .addEdge('ask_age', {
   conditions: [
-    { field: 'age', operator: 'lt', value: 18, goto: 'minor' },
-    { field: 'age', operator: 'gte', value: 65, goto: 'senior' },
+    { field: 'age', operator: 'lt', value: 18, goto: 'minor_node' },
+    { field: 'age', operator: 'gte', value: 65, goto: 'senior_node' },
   ],
-  default: 'adult'
+  default: 'adult_node'
 })
 ```
 
@@ -47,13 +55,6 @@ Define conditional routing using JSON configuration for fully serializable graph
 - **String/Array**: `contains`, `not_contains`
 - **Regular Expression**: `regex`
 - **Membership**: `in`, `not_in`
-
-### Type Safety
-
-Both `field` and `goto` are type-safe:
-
-- `field` must be a valid key in your schema
-- `goto` must be a valid node ID or `END`
 
 ### Examples
 
@@ -96,13 +97,3 @@ Both `field` and `goto` are type-safe:
 ### Condition Evaluation
 
 Conditions are evaluated in order, and the first matching condition determines the route. If no conditions match, the `default` route is used.
-
-## Benefits of JSON Routing
-
-- **Database Storage**: Store complete graph definitions in databases
-- **Dynamic Graphs**: Load and modify graphs at runtime
-- **No Code Deployment**: Update routing logic without redeploying code
-- **Version Control**: Track routing changes in JSON format
-- **Visual Editors**: Build graph UIs with JSON configuration
-
-Use `START` and `END` for graph boundaries.

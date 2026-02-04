@@ -22,7 +22,7 @@ const graph = new ChatGraphBuilder({ schema: State })
   })
   .addNode({
     id: 'reply',
-    action: (s) => ({ messages: [`Hi, ${s.name}!`] }),
+    action: { message: 'Hi, {{name}}!' },
     autoAdvance: true,
   })
   .addEdge(START, 'ask')
@@ -56,7 +56,7 @@ const graph = new ChatGraph({
     },
     {
       id: 'reply',
-      action: (s) => ({ messages: [`Hi, ${s.name}!`] }),
+      action: { message: 'Hi, {{name}}!' },
       autoAdvance: true,
     },
   ],
@@ -69,16 +69,3 @@ const graph = new ChatGraph({
 
 await graph.invoke({ user_message: 'Alice' });
 ```
-
-## Conditional Routing
-
-```typescript
-// Edge targets can be functions returning the next node id
-.addEdge('pick', (state) => (state.count > 0 ? 'A' : 'B'))
-```
-
-See the sub-guides for details:
-
-- Action: how nodes produce state updates
-- Validate: simple rules or functions
-- Edge: connect nodes or use functions for branching
