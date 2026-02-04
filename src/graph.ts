@@ -39,7 +39,7 @@ import { StorageAdapter } from './persistence/storage-adapter';
  *   .addNode("greet", {
  *     action: { message: "Hi! What's your name?" },
  *     validate: { regex: "\\w+", errorMessage: "Enter a valid name" },
- *     targetField: "name"
+ *     answerKey: "name"
  *   })
  *   .addEdge("__START__", "greet")
  *   .addEdge("greet", "__END__");
@@ -195,10 +195,10 @@ export class ChatGraph<
         }
       }
 
-      // All passed - save to targetField if specified
+      // All passed - save to answerKey if specified
       const updates =
-        validate && 'targetField' in validate && validate.targetField
-          ? { [validate.targetField]: input }
+        validate && 'answerKey' in validate && validate.answerKey
+          ? { [validate.answerKey]: input }
           : {};
 
       return {

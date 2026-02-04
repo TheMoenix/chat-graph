@@ -526,7 +526,7 @@ describe('Validation Types', () => {
                 errorMessage: 'Invalid email format',
               },
             ],
-            targetField: 'email',
+            answerKey: 'email',
           },
         })
         .addEdge(START, 'askEmail')
@@ -573,7 +573,7 @@ describe('Validation Types', () => {
                 errorMessage: 'Password must contain a number',
               },
             ],
-            targetField: 'password',
+            answerKey: 'password',
           },
         })
         .addEdge(START, 'askPassword')
@@ -810,7 +810,7 @@ describe('Complex Combinations', () => {
                 errorMessage: 'Invalid email',
               },
             ],
-            targetField: 'email',
+            answerKey: 'email',
           },
         },
         {
@@ -823,7 +823,7 @@ describe('Complex Combinations', () => {
                 errorMessage: 'Phone must be 10 digits',
               },
             ],
-            targetField: 'phone',
+            answerKey: 'phone',
           },
         },
         {

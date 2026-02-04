@@ -5,7 +5,7 @@ Check user input and optionally write values into state.
 ## Two Forms
 
 - Function: `(state, event) => ({ isValid, state?, errorMessage? })`
-- Rules object: `{ rules: [{ regex, errorMessage }], targetField?: string }`
+- Rules object: `{ rules: [{ regex, errorMessage }], answerKey?: string }`
 
 ## Examples
 
@@ -25,7 +25,7 @@ Check user input and optionally write values into state.
 {
   id: 'name',
   action: { message: 'Your name?' },
-  validate: { rules: [{ regex: "^\\w+$", errorMessage: 'Use letters/numbers' }], targetField: 'name' },
+  validate: { rules: [{ regex: "^\\w+$", errorMessage: 'Use letters/numbers' }], answerKey: 'name' },
 }
 ```
 

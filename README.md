@@ -28,7 +28,7 @@ const graph = new ChatGraphBuilder({ schema: State })
     id: 'greet',
     action: { message: "Hi! What's your name?" },
     validate: {
-      targetField: 'name',
+      answerKey: 'name',
       rules: { regex: '\\w+', errorMessage: 'Please enter a valid name' },
     },
   })

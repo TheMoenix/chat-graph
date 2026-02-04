@@ -18,7 +18,7 @@ const graph = new ChatGraphBuilder({ schema: State })
   .addNode({
     id: 'ask',
     action: { message: 'Your name?' },
-    validate: { targetField: 'name' },
+    validate: { answerKey: 'name' },
   })
   .addNode({
     id: 'reply',
@@ -52,7 +52,7 @@ const graph = new ChatGraph({
     {
       id: 'ask',
       action: { message: 'Your name?' },
-      validate: { targetField: 'name' },
+      validate: { answerKey: 'name' },
     },
     {
       id: 'reply',

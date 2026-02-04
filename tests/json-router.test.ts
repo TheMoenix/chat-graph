@@ -29,7 +29,7 @@ describe('JSON-based Router', () => {
             action: { message: 'Choose left or right' },
             validate: {
               rules: [{ regex: '^(left|right)$', errorMessage: 'Invalid' }],
-              targetField: 'choice',
+              answerKey: 'choice',
             },
           },
           {
@@ -95,7 +95,7 @@ describe('JSON-based Router', () => {
             action: { message: 'How old are you?' },
             validate: {
               rules: [{ regex: '^[0-9]+$', errorMessage: 'Invalid age' }],
-              targetField: 'age',
+              answerKey: 'age',
             },
           },
           {
@@ -147,7 +147,7 @@ describe('JSON-based Router', () => {
             action: { message: 'How old are you?' },
             validate: {
               rules: [{ regex: '^[0-9]+$', errorMessage: 'Invalid age' }],
-              targetField: 'age',
+              answerKey: 'age',
             },
           },
           {
@@ -207,7 +207,7 @@ describe('JSON-based Router', () => {
             id: 'ask',
             action: { message: 'Say something' },
             validate: {
-              targetField: 'text',
+              answerKey: 'text',
             },
           },
           {
@@ -265,7 +265,7 @@ describe('JSON-based Router', () => {
             id: 'ask_email',
             action: { message: 'Enter email' },
             validate: {
-              targetField: 'email',
+              answerKey: 'email',
             },
           },
           {
@@ -323,7 +323,7 @@ describe('JSON-based Router', () => {
             id: 'ask_color',
             action: { message: 'Pick a primary color' },
             validate: {
-              targetField: 'color',
+              answerKey: 'color',
             },
           },
           {
@@ -384,7 +384,7 @@ describe('JSON-based Router', () => {
             action: { message: 'Enter score' },
             validate: {
               rules: [{ regex: '^[0-9]+$', errorMessage: 'Invalid' }],
-              targetField: 'score',
+              answerKey: 'score',
             },
           },
           {
@@ -458,7 +458,7 @@ describe('JSON-based Router', () => {
             id: 'ask',
             action: { message: 'Enter value' },
             validate: {
-              targetField: 'value',
+              answerKey: 'value',
             },
           },
           {
@@ -516,7 +516,7 @@ describe('JSON-based Router', () => {
             id: 'ask',
             action: { message: 'Enter value' },
             validate: {
-              targetField: 'value',
+              answerKey: 'value',
             },
           },
           {
@@ -570,7 +570,7 @@ describe('JSON-based Router', () => {
             id: 'ask',
             action: { message: 'Choose' },
             validate: {
-              targetField: 'choice',
+              answerKey: 'choice',
             },
           },
           {
@@ -655,7 +655,7 @@ describe('JSON-based Router', () => {
             id: 'ask',
             action: { message: 'Enter value' },
             validate: {
-              targetField: 'value',
+              answerKey: 'value',
             },
           },
           {
@@ -713,7 +713,7 @@ describe('JSON-based Router', () => {
             id: 'ask',
             action: { message: 'Say something' },
             validate: {
-              targetField: 'text',
+              answerKey: 'text',
             },
           },
           {
@@ -771,7 +771,7 @@ describe('JSON-based Router', () => {
             id: 'ask_color',
             action: { message: 'Pick a color' },
             validate: {
-              targetField: 'color',
+              answerKey: 'color',
             },
           },
           {

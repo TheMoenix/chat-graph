@@ -46,7 +46,7 @@ async function demo() {
   //         rules: [
   //           { regex: '\\w+', errorMessage: 'Please enter a valid name.' },
   //         ],
-  //         targetField: 'name',
+  //         answerKey: 'name',
   //       },
   //     },
   //     {
@@ -61,7 +61,7 @@ async function demo() {
   //             errorMessage: 'Please enter a valid email.',
   //           },
   //         ],
-  //         targetField: 'email',
+  //         answerKey: 'email',
   //       },
   //     },
   //   ],
@@ -80,7 +80,7 @@ async function demo() {
       action: { message: "Hi! What's your name?" },
       validate: {
         rules: [{ regex: '\\w+', errorMessage: 'Please enter a valid name.' }],
-        targetField: 'name',
+        answerKey: 'name',
       },
     })
     .addNode({
@@ -98,7 +98,7 @@ async function demo() {
             errorMessage: 'Please enter a valid email.',
           },
         ],
-        targetField: 'email',
+        answerKey: 'email',
       },
     })
     .addNode({
@@ -113,7 +113,7 @@ async function demo() {
       },
       validate: {
         rules: [],
-        targetField: 'submit_choice',
+        answerKey: 'submit_choice',
       },
     })
     .addNode({
@@ -145,7 +145,7 @@ async function demo() {
       action: { message: "Hi! What's your name?" },
       validate: {
         rules: [{ regex: '\\w+', errorMessage: 'Please enter a valid name.' }],
-        targetField: 'name',
+        answerKey: 'name',
       },
     })
     .addNode({
@@ -163,7 +163,7 @@ async function demo() {
             errorMessage: 'Please enter a valid email.',
           },
         ],
-        targetField: 'email',
+        answerKey: 'email',
       },
     })
     .addNode({
@@ -178,7 +178,7 @@ async function demo() {
       },
       validate: {
         rules: [],
-        targetField: 'submit_choice',
+        answerKey: 'submit_choice',
       },
     })
     .addNode({

@@ -122,7 +122,7 @@ async function testMongoAdapter() {
           rules: [
             { regex: '\\w+', errorMessage: 'Please enter a valid name.' },
           ],
-          targetField: 'name',
+          answerKey: 'name',
         },
       })
       .addNode({
@@ -164,7 +164,7 @@ async function testMongoAdapter() {
           rules: [
             { regex: '\\w+', errorMessage: 'Please enter a valid name.' },
           ],
-          targetField: 'name',
+          answerKey: 'name',
         },
       })
       .addNode({

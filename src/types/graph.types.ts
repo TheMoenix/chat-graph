@@ -60,7 +60,7 @@ export type RunnableNodeValidate<Schema extends StateSchema = any> = (
 export type StaticNodeValidate = {
   rules?: readonly { regex: string; errorMessage: string }[];
   /** Field name to store validated input in state */
-  targetField?: string | null;
+  answerKey?: string | null;
 };
 
 export type NodeValidate<
