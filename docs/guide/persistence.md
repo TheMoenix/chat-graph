@@ -15,12 +15,10 @@ import {
 } from 'chat-graph';
 
 const State = z.object({
-  messages: z
-    .array(z.string())
-    .registerReducer(registry, {
-      default: () => [],
-      reducer: { fn: (p, n) => [...p, ...n] },
-    }),
+  messages: z.array(z.string()).registerReducer(registry, {
+    default: () => [],
+    reducer: { fn: (p, n) => [...p, ...n] },
+  }),
 });
 const storage = new MemoryStorageAdapter();
 
@@ -28,7 +26,7 @@ const graph = new ChatGraphBuilder({ schema: State })
   .addNode({
     id: 'hello',
     action: () => ({ messages: ['hi'] }),
-    noUserInput: true,
+    autoAdvance: true,
   })
   .addEdge(START, 'hello')
   .addEdge('hello', END)
@@ -45,7 +43,7 @@ const again = new ChatGraphBuilder({ schema: State })
   .addNode({
     id: 'hello',
     action: () => ({ messages: ['hi'] }),
-    noUserInput: true,
+    autoAdvance: true,
   })
   .addEdge(START, 'hello')
   .addEdge('hello', END)
@@ -85,7 +83,7 @@ const graph = new ChatGraphBuilder({ schema: State })
   .addNode({
     id: 'hello',
     action: () => ({ messages: ['hi'] }),
-    noUserInput: true,
+    autoAdvance: true,
   })
   .compile({ id: 'session-2', storageAdapter: mongo, autoSave: true });
 ```

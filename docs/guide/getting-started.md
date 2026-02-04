@@ -32,7 +32,7 @@ const graph = new ChatGraphBuilder({ schema: State })
   })
   .addNode({
     id: 'done',
-    noUserInput: true,
+    autoAdvance: true,
     action: { message: `Nice to meet you, {{name}}!` },
   })
   .addEdge(START, 'greet')

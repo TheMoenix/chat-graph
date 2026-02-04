@@ -130,7 +130,7 @@ async function testMongoAdapter() {
         action: (state: InferState<typeof WorkflowState>) => ({
           messages: [`Thanks ${state.name}!`],
         }),
-        noUserInput: true,
+        autoAdvance: true,
       })
       .addEdge(START, 'greet')
       .addEdge('greet', 'thanks')
@@ -172,7 +172,7 @@ async function testMongoAdapter() {
         action: (state: InferState<typeof WorkflowState>) => ({
           messages: [`Thanks ${state.name}!`],
         }),
-        noUserInput: true,
+        autoAdvance: true,
       })
       .addEdge(START, 'greet')
       .addEdge('greet', 'thanks')

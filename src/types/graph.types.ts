@@ -85,16 +85,16 @@ type NodeWithUserInput<
   Runnable extends boolean,
 > = NodeBase<Schema, Runnable> & {
   /**
-   * Indicates that no user input is expected for this node
-   * When this is true, after the action is executed, the flow moves to the next node automatically
-   * Note: You can't have validate if noUserInput is true
+   * When this is true, after the action is executed, the flow automatically moves to the next node
+   * when this is false or undefined, the flow waits for user input before moving to the next node
+   * Note: You can't have validate if autoAdvance is true since there's no user input to validate
    * @optional
    */
-  noUserInput?: false; // TODO try omit this field entirely
+  autoAdvance?: false; // TODO try omit this field entirely
   /**
    * This is for validating the user input and is it sufficient to wrap this node and move to the next node,
    * like if the user answered the question correctly or in the accepted format
-   * Note: You can't have validate if noUserInput is true
+   * Note: You can't have validate if autoAdvance is true since there's no user input to validate
    * @optional
    */
   validate?: NodeValidate<Schema, Runnable> | null;
@@ -106,15 +106,15 @@ type NodeWithoutUserInput<
   Runnable extends boolean,
 > = NodeBase<Schema, Runnable> & {
   /**
-   * Indicates that no user input is expected for this node
-   * When this is true, after the action is executed, the flow moves to the next node automatically
-   * Note: You can't have validate if noUserInput is true
+   * When this is true, after the action is executed, the flow automatically moves to the next node
+   * when this is false or undefined, the flow waits for user input before moving to the next node
+   * Note: You can't have validate if autoAdvance is true since there's no user input to validate
    */
-  noUserInput: true;
+  autoAdvance: true;
   /**
    * This is for validating the user input and is it sufficient to wrap this node and move to the next node,
    * like if the user answered the question correctly or in the accepted format
-   * Note: You can't have validate if noUserInput is true
+   * Note: You can't have validate if autoAdvance is true since there's no user input to validate
    */
   validate?: never;
 };

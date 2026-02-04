@@ -14,7 +14,7 @@ Define how a node updates state.
 { id: 'ask', action: { message: 'Your name?' } }
 
 // Function action (computed update)
-{ id: 'reply', action: (s) => ({ messages: [`Hi, ${s.name}!`] }), noUserInput: true }
+{ id: 'reply', action: (s) => ({ messages: [`Hi, ${s.name}!`] }), autoAdvance: true }
 
 // Any field is allowed at runtime; Zod gives types for DX
 { id: 'inc', action: (s) => ({ count: (s.count ?? 0) + 1 }) }
@@ -22,4 +22,4 @@ Define how a node updates state.
 
 ## No User Input
 
-Set `noUserInput: true` to skip the validation phase and continue automatically.
+Set `autoAdvance: true` to skip the validation phase and continue automatically.

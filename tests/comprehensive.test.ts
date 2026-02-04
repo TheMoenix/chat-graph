@@ -34,7 +34,7 @@ describe('Graph Creation Methods', () => {
         .addNode({
           id: 'test',
           action: { message: 'Hello' },
-          noUserInput: true,
+          autoAdvance: true,
         })
         .addEdge(START, 'test')
         .addEdge('test', END)
@@ -63,7 +63,7 @@ describe('Graph Creation Methods', () => {
           {
             id: 'test',
             action: { message: 'Hello' },
-            noUserInput: true,
+            autoAdvance: true,
           },
         ],
         edges: [
@@ -94,12 +94,12 @@ describe('State Management', () => {
           .addNode({
             id: 'step1',
             action: () => ({ name: 'Alice', messages: ['msg1'] }),
-            noUserInput: true,
+            autoAdvance: true,
           })
           .addNode({
             id: 'step2',
             action: () => ({ messages: ['msg2'] }),
-            noUserInput: true,
+            autoAdvance: true,
           })
           .addEdge(START, 'step1')
           .addEdge('step1', 'step2')
@@ -129,12 +129,12 @@ describe('State Management', () => {
           .addNode({
             id: 'step1',
             action: () => ({ count: 5, messages: ['msg1'] }),
-            noUserInput: true,
+            autoAdvance: true,
           })
           .addNode({
             id: 'step2',
             action: () => ({ count: 3, messages: ['msg2'] }),
-            noUserInput: true,
+            autoAdvance: true,
           })
           .addEdge(START, 'step1')
           .addEdge('step1', 'step2')
@@ -165,12 +165,12 @@ describe('State Management', () => {
           .addNode({
             id: 'step1',
             action: () => ({ status: 'started', count: 1, messages: ['a'] }),
-            noUserInput: true,
+            autoAdvance: true,
           })
           .addNode({
             id: 'step2',
             action: () => ({ status: 'completed', count: 2, messages: ['b'] }),
-            noUserInput: true,
+            autoAdvance: true,
           })
           .addEdge(START, 'step1')
           .addEdge('step1', 'step2')
@@ -193,12 +193,12 @@ describe('State Management', () => {
           {
             id: 'step1',
             action: () => ({ data: 'value1', messages: ['msg1'] }),
-            noUserInput: true,
+            autoAdvance: true,
           },
           {
             id: 'step2',
             action: () => ({ extra: 'value2', messages: ['msg2'] }),
-            noUserInput: true,
+            autoAdvance: true,
           },
         ],
         edges: [
@@ -234,17 +234,17 @@ describe('Edge Types', () => {
         .addNode({
           id: 'a',
           action: () => ({ messages: ['A'], path: ['a'] }),
-          noUserInput: true,
+          autoAdvance: true,
         })
         .addNode({
           id: 'b',
           action: () => ({ messages: ['B'], path: ['b'] }),
-          noUserInput: true,
+          autoAdvance: true,
         })
         .addNode({
           id: 'c',
           action: () => ({ messages: ['C'], path: ['c'] }),
-          noUserInput: true,
+          autoAdvance: true,
         })
         .addEdge(START, 'a')
         .addEdge('a', 'b')
@@ -279,17 +279,17 @@ describe('Edge Types', () => {
             messages: ['decide'],
             path: ['decide'],
           }),
-          noUserInput: true,
+          autoAdvance: true,
         })
         .addNode({
           id: 'left',
           action: () => ({ messages: ['left'], path: ['left'] }),
-          noUserInput: true,
+          autoAdvance: true,
         })
         .addNode({
           id: 'right',
           action: () => ({ messages: ['right'], path: ['right'] }),
-          noUserInput: true,
+          autoAdvance: true,
         })
         .addEdge(START, 'decide')
         .addEdge('decide', (state: InferState<typeof State>) => {
@@ -317,17 +317,17 @@ describe('Edge Types', () => {
         .addNode({
           id: 'input',
           action: () => ({ value: 15, messages: ['input'] }),
-          noUserInput: true,
+          autoAdvance: true,
         })
         .addNode({
           id: 'low',
           action: () => ({ result: 'low', messages: ['low'] }),
-          noUserInput: true,
+          autoAdvance: true,
         })
         .addNode({
           id: 'high',
           action: () => ({ result: 'high', messages: ['high'] }),
-          noUserInput: true,
+          autoAdvance: true,
         })
         .addEdge(START, 'input')
         .addEdge('input', (state: InferState<typeof State>) =>
@@ -357,7 +357,7 @@ describe('Action Types', () => {
         .addNode({
           id: 'greet',
           action: { message: 'Hello, World!' },
-          noUserInput: true,
+          autoAdvance: true,
         })
         .addEdge(START, 'greet')
         .addEdge('greet', END)
@@ -380,12 +380,12 @@ describe('Action Types', () => {
         .addNode({
           id: 'setName',
           action: () => ({ name: 'Alice' }),
-          noUserInput: true,
+          autoAdvance: true,
         })
         .addNode({
           id: 'greet',
           action: { message: 'Hello, {{name}}!' },
-          noUserInput: true,
+          autoAdvance: true,
         })
         .addEdge(START, 'setName')
         .addEdge('setName', 'greet')
@@ -414,7 +414,7 @@ describe('Action Types', () => {
             count: state.count + 1,
             messages: [`Count is now ${state.count + 1}`],
           }),
-          noUserInput: true,
+          autoAdvance: true,
         })
         .addEdge(START, 'increment')
         .addEdge('increment', END)
@@ -441,7 +441,7 @@ describe('Action Types', () => {
             await new Promise((resolve) => setTimeout(resolve, 10));
             return { data: 'fetched', messages: ['Data fetched'] };
           },
-          noUserInput: true,
+          autoAdvance: true,
         })
         .addEdge(START, 'fetch')
         .addEdge('fetch', END)
@@ -467,7 +467,7 @@ describe('Action Types', () => {
             userInput: event.user_message,
             messages: [`You said: ${event.user_message}`],
           }),
-          noUserInput: true,
+          autoAdvance: true,
         })
         .addEdge(START, 'process')
         .addEdge('process', END)
@@ -481,7 +481,7 @@ describe('Action Types', () => {
 });
 
 describe('Validation Types', () => {
-  describe('No Validation (noUserInput)', () => {
+  describe('No Validation (autoAdvance)', () => {
     it('should execute without waiting for user input', async () => {
       const State = z.object({
         messages: z.array(z.string()).registerReducer(registry, {
@@ -494,7 +494,7 @@ describe('Validation Types', () => {
         .addNode({
           id: 'auto',
           action: { message: 'Automatic' },
-          noUserInput: true,
+          autoAdvance: true,
         })
         .addEdge(START, 'auto')
         .addEdge('auto', END)
@@ -756,7 +756,7 @@ describe('Complex Combinations', () => {
           category: 'child',
           messages: ['You are a child!'],
         }),
-        noUserInput: true,
+        autoAdvance: true,
       })
       .addNode({
         id: 'adult',
@@ -764,7 +764,7 @@ describe('Complex Combinations', () => {
           category: 'adult',
           messages: ['You are an adult!'],
         }),
-        noUserInput: true,
+        autoAdvance: true,
       })
       .addEdge(START, 'askName')
       .addEdge('askName', 'askAge')
@@ -829,7 +829,7 @@ describe('Complex Combinations', () => {
         {
           id: 'thanks',
           action: { message: 'Thank you!' },
-          noUserInput: true,
+          autoAdvance: true,
         },
       ],
       edges: [

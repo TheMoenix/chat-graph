@@ -1,6 +1,6 @@
 # chat-graph
 
-A type-safe, code-first chat flow engine with a graph-based builder, Zod-based state schemas with reducers, and pluggable persistence (Memory, MongoDB).
+A code-first chat flow engine with a graph-based builder, Zod-based state schemas with reducers, and pluggable persistence (Memory, MongoDB).
 
 ## Installation
 
@@ -34,7 +34,7 @@ const graph = new ChatGraphBuilder({ schema: State })
   })
   .addNode({
     id: 'farewell',
-    noUserInput: true,
+    autoAdvance: true,
     action: (state) => ({ messages: [`Nice to meet you, ${state.name}!`] }),
   })
   .addEdge(START, 'greet')

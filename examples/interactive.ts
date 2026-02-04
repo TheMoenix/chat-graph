@@ -119,7 +119,7 @@ async function demo() {
     .addNode({
       id: 'thanks',
       action: { message: 'Thank you!' },
-      noUserInput: true,
+      autoAdvance: true,
     })
     .addEdge(START, 'greet')
     .addEdge('greet', 'ask_email')
@@ -184,7 +184,7 @@ async function demo() {
     .addNode({
       id: 'thanks',
       action: { message: 'Thank you!' },
-      noUserInput: true,
+      autoAdvance: true,
     })
     .addEdge(START, 'greet')
     .addEdge('greet', 'ask_email')

@@ -8,12 +8,10 @@ Two simple ways to define a graph: chaining builder API, or plain JSON-style con
 import { ChatGraphBuilder, START, END, z, registry } from 'chat-graph';
 
 const State = z.object({
-  messages: z
-    .array(z.string())
-    .registerReducer(registry, {
-      default: () => [],
-      reducer: { fn: (p, n) => [...p, ...n] },
-    }),
+  messages: z.array(z.string()).registerReducer(registry, {
+    default: () => [],
+    reducer: { fn: (p, n) => [...p, ...n] },
+  }),
 });
 
 const graph = new ChatGraphBuilder({ schema: State })
@@ -25,7 +23,7 @@ const graph = new ChatGraphBuilder({ schema: State })
   .addNode({
     id: 'reply',
     action: (s) => ({ messages: [`Hi, ${s.name}!`] }),
-    noUserInput: true,
+    autoAdvance: true,
   })
   .addEdge(START, 'ask')
   .addEdge('ask', 'reply')
@@ -41,12 +39,10 @@ await graph.invoke({ user_message: 'Alice' });
 import { ChatGraph, START, END, z, registry } from 'chat-graph';
 
 const State = z.object({
-  messages: z
-    .array(z.string())
-    .registerReducer(registry, {
-      default: () => [],
-      reducer: { fn: (p, n) => [...p, ...n] },
-    }),
+  messages: z.array(z.string()).registerReducer(registry, {
+    default: () => [],
+    reducer: { fn: (p, n) => [...p, ...n] },
+  }),
 });
 
 const graph = new ChatGraph({
@@ -61,7 +57,7 @@ const graph = new ChatGraph({
     {
       id: 'reply',
       action: (s) => ({ messages: [`Hi, ${s.name}!`] }),
-      noUserInput: true,
+      autoAdvance: true,
     },
   ],
   edges: [

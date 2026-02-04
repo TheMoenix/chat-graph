@@ -35,12 +35,12 @@ describe('JSON-based Router', () => {
           {
             id: 'left_path',
             action: { message: 'You chose left!' },
-            noUserInput: true,
+            autoAdvance: true,
           },
           {
             id: 'right_path',
             action: { message: 'You chose right!' },
-            noUserInput: true,
+            autoAdvance: true,
           },
         ],
         edges: [
@@ -101,17 +101,17 @@ describe('JSON-based Router', () => {
           {
             id: 'minor',
             action: { message: 'You are a minor' },
-            noUserInput: true,
+            autoAdvance: true,
           },
           {
             id: 'adult',
             action: { message: 'You are an adult' },
-            noUserInput: true,
+            autoAdvance: true,
           },
           {
             id: 'senior',
             action: { message: 'You are a senior' },
-            noUserInput: true,
+            autoAdvance: true,
           },
         ],
         edges: [
@@ -153,17 +153,17 @@ describe('JSON-based Router', () => {
           {
             id: 'minor',
             action: { message: 'You are a minor' },
-            noUserInput: true,
+            autoAdvance: true,
           },
           {
             id: 'adult',
             action: { message: 'You are an adult' },
-            noUserInput: true,
+            autoAdvance: true,
           },
           {
             id: 'senior',
             action: { message: 'You are a senior' },
-            noUserInput: true,
+            autoAdvance: true,
           },
         ],
         edges: [
@@ -213,12 +213,12 @@ describe('JSON-based Router', () => {
           {
             id: 'hello_response',
             action: { message: 'Hello to you too!' },
-            noUserInput: true,
+            autoAdvance: true,
           },
           {
             id: 'other_response',
             action: { message: 'I heard you' },
-            noUserInput: true,
+            autoAdvance: true,
           },
         ],
         edges: [
@@ -271,12 +271,12 @@ describe('JSON-based Router', () => {
           {
             id: 'valid_email',
             action: { message: 'Valid email!' },
-            noUserInput: true,
+            autoAdvance: true,
           },
           {
             id: 'invalid_email',
             action: { message: 'Invalid email!' },
-            noUserInput: true,
+            autoAdvance: true,
           },
         ],
         edges: [
@@ -329,12 +329,12 @@ describe('JSON-based Router', () => {
           {
             id: 'primary',
             action: { message: 'Good choice!' },
-            noUserInput: true,
+            autoAdvance: true,
           },
           {
             id: 'not_primary',
             action: { message: 'Not a primary color' },
-            noUserInput: true,
+            autoAdvance: true,
           },
         ],
         edges: [
@@ -390,22 +390,22 @@ describe('JSON-based Router', () => {
           {
             id: 'excellent',
             action: { message: 'Excellent!' },
-            noUserInput: true,
+            autoAdvance: true,
           },
           {
             id: 'good',
             action: { message: 'Good!' },
-            noUserInput: true,
+            autoAdvance: true,
           },
           {
             id: 'fair',
             action: { message: 'Fair' },
-            noUserInput: true,
+            autoAdvance: true,
           },
           {
             id: 'poor',
             action: { message: 'Poor' },
-            noUserInput: true,
+            autoAdvance: true,
           },
         ],
         edges: [
@@ -464,12 +464,12 @@ describe('JSON-based Router', () => {
           {
             id: 'matched',
             action: { message: 'Matched!' },
-            noUserInput: true,
+            autoAdvance: true,
           },
           {
             id: 'default',
             action: { message: 'Default path' },
-            noUserInput: true,
+            autoAdvance: true,
           },
         ],
         edges: [
@@ -522,7 +522,7 @@ describe('JSON-based Router', () => {
           {
             id: 'matched',
             action: { message: 'Matched!' },
-            noUserInput: true,
+            autoAdvance: true,
           },
         ],
         edges: [
@@ -576,12 +576,12 @@ describe('JSON-based Router', () => {
           {
             id: 'left',
             action: { message: 'Left!' },
-            noUserInput: true,
+            autoAdvance: true,
           },
           {
             id: 'right',
             action: { message: 'Right!' },
-            noUserInput: true,
+            autoAdvance: true,
           },
         ],
         edges: [
@@ -616,12 +616,12 @@ describe('JSON-based Router', () => {
           {
             id: 'first',
             action: { message: 'First' },
-            noUserInput: true,
+            autoAdvance: true,
           },
           {
             id: 'second',
             action: { message: 'Second' },
-            noUserInput: true,
+            autoAdvance: true,
           },
         ],
         edges: [
@@ -661,12 +661,12 @@ describe('JSON-based Router', () => {
           {
             id: 'not_skip',
             action: { message: 'Processing...' },
-            noUserInput: true,
+            autoAdvance: true,
           },
           {
             id: 'skipped',
             action: { message: 'Skipped!' },
-            noUserInput: true,
+            autoAdvance: true,
           },
         ],
         edges: [
@@ -719,12 +719,12 @@ describe('JSON-based Router', () => {
           {
             id: 'clean',
             action: { message: 'Clean message!' },
-            noUserInput: true,
+            autoAdvance: true,
           },
           {
             id: 'spam',
             action: { message: 'Spam detected!' },
-            noUserInput: true,
+            autoAdvance: true,
           },
         ],
         edges: [
@@ -777,12 +777,12 @@ describe('JSON-based Router', () => {
           {
             id: 'allowed',
             action: { message: 'Allowed color!' },
-            noUserInput: true,
+            autoAdvance: true,
           },
           {
             id: 'forbidden',
             action: { message: 'Forbidden color!' },
-            noUserInput: true,
+            autoAdvance: true,
           },
         ],
         edges: [

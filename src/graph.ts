@@ -118,11 +118,11 @@ export class ChatGraph<
     nodes: readonly Node<Schema>[]
   ): Node<Schema, Runnable>[] {
     return nodes.map((node) => {
-      if (node.noUserInput)
+      if (node.autoAdvance)
         return {
           id: node.id,
           action: this.createAction(node.action),
-          noUserInput: node.noUserInput,
+          autoAdvance: node.autoAdvance,
         };
       else
         return {
@@ -393,7 +393,7 @@ export class ChatGraph<
       );
     }
 
-    if (node.noUserInput) {
+    if (node.autoAdvance) {
       this.tracker.__isResponseValid = true;
     }
 
