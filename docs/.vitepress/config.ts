@@ -19,8 +19,12 @@ export default {
         {
           text: 'Building',
           items: [
-            { text: 'Action', link: '/guide/building/action' },
-            { text: 'Validate', link: '/guide/building/validate' },
+            {
+              Node: [
+                { text: 'Action', link: '/guide/building/node/action' },
+                { text: 'Validate', link: '/guide/building/node/validate' },
+              ],
+            },
             { text: 'Edge', link: '/guide/building/edge' },
           ],
         },
