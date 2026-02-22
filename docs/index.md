@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: 'chat-graph'
-  text: 'A type-safe conversational flow engine'
-  tagline: Graph-based builder, Zod schemas, and pluggable persistence
+  text: 'Build graph-based conversation flows'
+  tagline: The easiest way for developers to build complex conversation flows (e.g., chatbots) with state management, validation, and persistence.
   actions:
     - theme: brand
       text: Get Started
@@ -14,10 +14,10 @@ hero:
       link: https://github.com/TheMoenix/chat-graph
 
 features:
-  - title: Two-Phase Nodes
-    details: Every node executes an action and then validates the user response.
-  - title: Zod Schemas
-    details: Define state with Zod and reducer-based merging for complex flows.
+  - title: Graph-Based Flows
+    details: Define conversation flows as directed graphs with nodes and edges.
+  - title: State Management
+    details: Built-in state management for tracking conversation context and user data.
   - title: Persistence
-    details: Versioned snapshots via Memory or MongoDB adapters with restore/history.
+    details: Easily save and load conversation states to support long-term interactions in a stateless environment.
 ---

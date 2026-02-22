@@ -13,14 +13,15 @@ export default {
     sidebar: {
       '/guide/': [
         { text: 'Getting Started', link: '/guide/getting-started' },
-        { text: 'Graph Building', link: '/guide/graph-building' },
+        { text: 'The Graph', link: '/guide/graph' },
         { text: 'State Management', link: '/guide/state-management' },
-        { text: 'Persistence', link: '/guide/persistence' },
+        { text: 'Storage & Persistence', link: '/guide/storage-persistence' },
         {
           text: 'Building',
           items: [
             {
               text: 'Node',
+              link: '/guide/node',
               items: [
                 { text: 'Action', link: '/guide/building/node/action' },
                 { text: 'Validate', link: '/guide/building/node/validate' },

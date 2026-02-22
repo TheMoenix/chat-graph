@@ -1,4 +1,4 @@
-# State & Zod
+# State Management
 
 Define state with Zod, get type-safe updates, and use simple reducers for merging. Runtime stays flexible — no forced validation.
 

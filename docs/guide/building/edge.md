@@ -1,12 +1,12 @@
 # Edge
 
-Connect nodes in sequence or branch conditionally.
+An edge is a way to connect nodes in sequence or branch conditionally.
 Use `START` and `END` for graph boundaries.
 
 ## Basics
 
 - **From**: a node id or `START`
-- **To**: a node id, `END`, a function `(state) => nextId`, or a JSON-based router object
+- **To**: a node id, `END`, a function `(state) => nextNodeId`, or a JSON-based router object
 
 ## Simple Edges
 

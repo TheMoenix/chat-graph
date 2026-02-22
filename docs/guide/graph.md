@@ -1,4 +1,4 @@
-# Building Graphs
+# The Graph
 
 Two simple ways to define a graph: chaining builder API, or plain JSON-style config.
 
