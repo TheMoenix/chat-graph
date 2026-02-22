@@ -21,7 +21,7 @@ export default {
           items: [
             {
               text: 'Node',
-              link: '/guide/node',
+              link: '/guide/building/node/node',
               items: [
                 { text: 'Action', link: '/guide/building/node/action' },
                 { text: 'Validate', link: '/guide/building/node/validate' },
