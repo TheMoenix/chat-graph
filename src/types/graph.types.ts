@@ -1,4 +1,3 @@
-import { z } from 'zod';
 import { START, END } from '../constants';
 import { InferState, StateSchema } from '../schema/state-schema';
 
@@ -19,13 +18,13 @@ export type Tracker<Nodes extends readonly NodeId[]> = {
  * Event representing user input or system triggers
  */
 export type ChatEvent = {
-  user_message: string;
+  userMessage: string;
 };
 
 /**
  * Result of validating user input
  */
-export type ValidationResult<Schema extends StateSchema = any> = {
+export type ValidationResult<Schema extends StateSchema = StateSchema> = {
   /** Whether validation passed */
   isValid: boolean;
   /** Error message to show if validation failed */
@@ -52,7 +51,7 @@ export type NodeAction<
   ? RunnableNodeAction<Schema>
   : RunnableNodeAction<Schema> | StaticNodeAction;
 
-export type RunnableNodeValidate<Schema extends StateSchema = any> = (
+export type RunnableNodeValidate<Schema extends StateSchema = StateSchema> = (
   state: InferState<Schema>,
   event: ChatEvent
 ) => ValidationResult<Schema> | Promise<ValidationResult<Schema>>;
@@ -64,13 +63,13 @@ export type StaticNodeValidate = {
 };
 
 export type NodeValidate<
-  Schema extends StateSchema = any,
+  Schema extends StateSchema = StateSchema,
   Runnable extends boolean = false,
 > = Runnable extends true
   ? RunnableNodeValidate<Schema>
   : RunnableNodeValidate<Schema> | StaticNodeValidate;
 
-type NodeId = {
+export type NodeId = {
   id: string;
 };
 
@@ -153,14 +152,14 @@ export type ConditionOperator =
  */
 export type RouterCondition<
   Nodes extends readonly NodeId[] = readonly NodeId[],
-  Schema extends StateSchema = any,
+  Schema extends StateSchema = StateSchema,
 > = {
   /** State field to check (type-safe against schema) */
   field: keyof InferState<Schema>;
   /** Comparison operator */
   operator: ConditionOperator;
   /** Value to compare against */
-  value: any;
+  value: InferState<Schema>[keyof InferState<Schema>];
   /** Node to go to if condition matches (type-safe against node IDs) */
   goto: ExtractNodeIds<Nodes> | typeof END;
 };
@@ -171,7 +170,7 @@ export type RouterCondition<
  */
 export type StaticRouter<
   Nodes extends readonly NodeId[] = readonly NodeId[],
-  Schema extends StateSchema = any,
+  Schema extends StateSchema = StateSchema,
 > = {
   /** Array of conditions to evaluate in order */
   conditions: readonly RouterCondition<Nodes, Schema>[];
@@ -181,7 +180,7 @@ export type StaticRouter<
 
 type RouterNode<
   Nodes extends readonly NodeId[],
-  Schema extends StateSchema = any,
+  Schema extends StateSchema = StateSchema,
 > = (state: InferState<Schema>) => Nodes[number]['id'] | typeof END;
 
 type EdgeFrom<Nodes extends readonly NodeId[]> =
@@ -190,7 +189,7 @@ type EdgeFrom<Nodes extends readonly NodeId[]> =
 
 type EdgeTo<
   Nodes extends readonly NodeId[],
-  Schema extends StateSchema = any,
+  Schema extends StateSchema = StateSchema,
 > =
   | ExtractNodeIds<Nodes>
   | RouterNode<Nodes, Schema>
@@ -199,12 +198,12 @@ type EdgeTo<
 
 type RunnableEdgeTo<
   Nodes extends readonly NodeId[],
-  Schema extends StateSchema = any,
+  Schema extends StateSchema = StateSchema,
 > = ExtractNodeIds<Nodes> | RouterNode<Nodes, Schema> | typeof END;
 
 export type Edge<
   Nodes extends readonly NodeId[],
-  Schema extends StateSchema = any,
+  Schema extends StateSchema = StateSchema,
 > = {
   from: EdgeFrom<Nodes>;
   to: EdgeTo<Nodes, Schema>;
@@ -214,19 +213,19 @@ type EdgesArray<Nodes extends readonly NodeId[]> = Edge<Nodes>[];
 
 type EdgesMap<
   Nodes extends readonly NodeId[],
-  Schema extends StateSchema = any,
+  Schema extends StateSchema = StateSchema,
 > = Map<EdgeFrom<Nodes>, RunnableEdgeTo<Nodes, Schema>>;
 
 export type Edges<
   Nodes extends readonly NodeId[],
   RunnableMap extends boolean = false,
-  Schema extends StateSchema = any,
+  Schema extends StateSchema = StateSchema,
 > = RunnableMap extends false ? EdgesArray<Nodes> : EdgesMap<Nodes, Schema>;
 
 export type Graph<
   Nodes extends readonly Node<Schema, R>[],
   R extends boolean = false,
-  Schema extends StateSchema = any,
+  Schema extends StateSchema = StateSchema,
 > = {
   id: string;
   nodes: Nodes;
@@ -234,14 +233,14 @@ export type Graph<
   initialState?: InferState<Schema>;
 };
 
-type HasDuplicates<
-  Arr extends readonly string[],
-  Seen extends string = never,
-> = Arr extends readonly [
-  infer First extends string,
-  ...infer Rest extends readonly string[],
-]
-  ? First extends Seen
-    ? true // Found duplicate!
-    : HasDuplicates<Rest, Seen | First>
-  : false;
+// type HasDuplicates<
+//   Arr extends readonly string[],
+//   Seen extends string = never,
+// > = Arr extends readonly [
+//   infer First extends string,
+//   ...infer Rest extends readonly string[],
+// ]
+//   ? First extends Seen
+//     ? true // Found duplicate!
+//     : HasDuplicates<Rest, Seen | First>
+//   : false;

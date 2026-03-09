@@ -182,7 +182,7 @@ export class ChatGraph<
       _: InferState<Schema>,
       event: ChatEvent
     ): ValidationResult<Schema> => {
-      const input = event.user_message || '';
+      const input = event.userMessage || '';
 
       // Run all validators
       for (const validator of rules) {

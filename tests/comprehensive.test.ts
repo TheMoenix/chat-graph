@@ -40,7 +40,7 @@ describe('Graph Creation Methods', () => {
         .addEdge('test', END)
         .compile({ id: 'builder-test' });
 
-      const result = await graph.invoke({ user_message: '' });
+      const result = await graph.invoke({ userMessage: '' });
       expect(result.messages).toEqual(['Hello']);
       expect(graph.isDone).toBe(true);
     });
@@ -72,7 +72,7 @@ describe('Graph Creation Methods', () => {
         ],
       });
 
-      const result = await graph.invoke({ user_message: '' });
+      const result = await graph.invoke({ userMessage: '' });
       expect(result.messages).toEqual(['Hello']);
       expect(graph.isDone).toBe(true);
     });
@@ -106,7 +106,7 @@ describe('State Management', () => {
           .addEdge('step2', END)
           .compile({ id: 'no-reducer' });
 
-        await graph.invoke({ user_message: '' });
+        await graph.invoke({ userMessage: '' });
         expect(graph.state.name).toBe('Alice');
         expect(graph.state.messages).toEqual(['msg2']); // Replaced, not merged
       });
@@ -141,7 +141,7 @@ describe('State Management', () => {
           .addEdge('step2', END)
           .compile({ id: 'with-reducer' });
 
-        await graph.invoke({ user_message: '' });
+        await graph.invoke({ userMessage: '' });
         expect(graph.state.count).toBe(8); // 5 + 3
         expect(graph.state.messages).toEqual(['msg1', 'msg2']); // Concatenated
       });
@@ -177,7 +177,7 @@ describe('State Management', () => {
           .addEdge('step2', END)
           .compile({ id: 'mixed' });
 
-        await graph.invoke({ user_message: '' });
+        await graph.invoke({ userMessage: '' });
         expect(graph.state.status).toBe('completed'); // Replaced
         expect(graph.state.count).toBe(3); // Reduced
         expect(graph.state.messages).toEqual(['a', 'b']); // Reduced
@@ -208,7 +208,7 @@ describe('State Management', () => {
         ],
       });
 
-      await graph.invoke({ user_message: '' });
+      await graph.invoke({ userMessage: '' });
       expect((graph.state as any).data).toBe('value1');
       expect((graph.state as any).extra).toBe('value2');
       expect((graph.state as any).messages).toEqual(['msg2']); // Last write wins
@@ -252,7 +252,7 @@ describe('Edge Types', () => {
         .addEdge('c', END)
         .compile({ id: 'simple-edges' });
 
-      await graph.invoke({ user_message: '' });
+      await graph.invoke({ userMessage: '' });
       expect(graph.state.path).toEqual(['a', 'b', 'c']);
     });
   });
@@ -299,7 +299,7 @@ describe('Edge Types', () => {
         .addEdge('right', END)
         .compile({ id: 'router-edges' });
 
-      await graph.invoke({ user_message: '' });
+      await graph.invoke({ userMessage: '' });
       expect(graph.state.path).toEqual(['decide', 'left']);
     });
 
@@ -337,7 +337,7 @@ describe('Edge Types', () => {
         .addEdge('high', END)
         .compile({ id: 'dynamic-router' });
 
-      await graph.invoke({ user_message: '' });
+      await graph.invoke({ userMessage: '' });
       expect(graph.state.result).toBe('high');
     });
   });
@@ -363,7 +363,7 @@ describe('Action Types', () => {
         .addEdge('greet', END)
         .compile({ id: 'simple-message' });
 
-      await graph.invoke({ user_message: '' });
+      await graph.invoke({ userMessage: '' });
       expect(graph.state.messages).toEqual(['Hello, World!']);
     });
 
@@ -392,7 +392,7 @@ describe('Action Types', () => {
         .addEdge('greet', END)
         .compile({ id: 'interpolation' });
 
-      await graph.invoke({ user_message: '' });
+      await graph.invoke({ userMessage: '' });
       expect(graph.state.messages).toContain('Hello, Alice!');
     });
   });
@@ -420,7 +420,7 @@ describe('Action Types', () => {
         .addEdge('increment', END)
         .compile({ id: 'function-action' });
 
-      await graph.invoke({ user_message: '' });
+      await graph.invoke({ userMessage: '' });
       expect(graph.state.count).toBe(1);
       expect(graph.state.messages).toContain('Count is now 1');
     });
@@ -447,7 +447,7 @@ describe('Action Types', () => {
         .addEdge('fetch', END)
         .compile({ id: 'async-action' });
 
-      await graph.invoke({ user_message: '' });
+      await graph.invoke({ userMessage: '' });
       expect(graph.state.data).toBe('fetched');
     });
 
@@ -464,8 +464,8 @@ describe('Action Types', () => {
         .addNode({
           id: 'process',
           action: (state: InferState<typeof State>, event: ChatEvent) => ({
-            userInput: event.user_message,
-            messages: [`You said: ${event.user_message}`],
+            userInput: event.userMessage,
+            messages: [`You said: ${event.userMessage}`],
           }),
           autoAdvance: true,
         })
@@ -473,7 +473,7 @@ describe('Action Types', () => {
         .addEdge('process', END)
         .compile({ id: 'state-event' });
 
-      await graph.invoke({ user_message: 'Hello!' });
+      await graph.invoke({ userMessage: 'Hello!' });
       expect(graph.state.userInput).toBe('Hello!');
       expect(graph.state.messages).toContain('You said: Hello!');
     });
@@ -500,7 +500,7 @@ describe('Validation Types', () => {
         .addEdge('auto', END)
         .compile({ id: 'no-validation' });
 
-      await graph.invoke({ user_message: '' });
+      await graph.invoke({ userMessage: '' });
       expect(graph.isDone).toBe(true);
     });
   });
@@ -534,17 +534,17 @@ describe('Validation Types', () => {
         .compile({ id: 'regex-validation' });
 
       // First invoke - ask question
-      let result = await graph.invoke({ user_message: '' });
+      let result = await graph.invoke({ userMessage: '' });
       expect(result.messages).toContain('Enter your email:');
       expect(graph.isDone).toBe(false);
 
       // Invalid input
-      result = await graph.invoke({ user_message: 'not-an-email' });
+      result = await graph.invoke({ userMessage: 'not-an-email' });
       expect(result.messages).toContain('Invalid email format');
       expect(graph.isDone).toBe(false);
 
       // Valid input
-      result = await graph.invoke({ user_message: 'test@example.com' });
+      result = await graph.invoke({ userMessage: 'test@example.com' });
       expect(graph.state.email).toBe('test@example.com');
       expect(graph.isDone).toBe(true);
     });
@@ -580,20 +580,20 @@ describe('Validation Types', () => {
         .addEdge('askPassword', END)
         .compile({ id: 'multi-regex' });
 
-      await graph.invoke({ user_message: '' });
+      await graph.invoke({ userMessage: '' });
 
       // Too short
-      let result = await graph.invoke({ user_message: 'short' });
+      let result = await graph.invoke({ userMessage: 'short' });
       expect(result.messages).toContain(
         'Password must be at least 8 characters'
       );
 
       // No number
-      result = await graph.invoke({ user_message: 'longpassword' });
+      result = await graph.invoke({ userMessage: 'longpassword' });
       expect(result.messages).toContain('Password must contain a number');
 
       // Valid
-      result = await graph.invoke({ user_message: 'password123' });
+      result = await graph.invoke({ userMessage: 'password123' });
       expect(graph.state.password).toBe('password123');
       expect(graph.isDone).toBe(true);
     });
@@ -614,7 +614,7 @@ describe('Validation Types', () => {
           id: 'askAge',
           action: { message: 'Enter your age:' },
           validate: (state: InferState<typeof State>, event: ChatEvent) => {
-            const age = parseInt(event.user_message);
+            const age = parseInt(event.userMessage);
             if (isNaN(age)) {
               return {
                 isValid: false,
@@ -637,18 +637,18 @@ describe('Validation Types', () => {
         .addEdge('askAge', END)
         .compile({ id: 'function-validation' });
 
-      await graph.invoke({ user_message: '' });
+      await graph.invoke({ userMessage: '' });
 
       // Not a number
-      let result = await graph.invoke({ user_message: 'abc' });
+      let result = await graph.invoke({ userMessage: 'abc' });
       expect(result.messages).toContain('Please enter a valid number');
 
       // Too young
-      result = await graph.invoke({ user_message: '16' });
+      result = await graph.invoke({ userMessage: '16' });
       expect(result.messages).toContain('You must be 18 or older');
 
       // Valid
-      result = await graph.invoke({ user_message: '25' });
+      result = await graph.invoke({ userMessage: '25' });
       expect(graph.state.age).toBe(25);
       expect(graph.isDone).toBe(true);
     });
@@ -672,7 +672,7 @@ describe('Validation Types', () => {
           ) => {
             await new Promise((resolve) => setTimeout(resolve, 10));
             const taken = ['admin', 'root'];
-            if (taken.includes(event.user_message)) {
+            if (taken.includes(event.userMessage)) {
               return {
                 isValid: false,
                 errorMessage: 'Username already taken',
@@ -680,7 +680,7 @@ describe('Validation Types', () => {
             }
             return {
               isValid: true,
-              state: { username: event.user_message },
+              state: { username: event.userMessage },
             };
           },
         })
@@ -688,12 +688,12 @@ describe('Validation Types', () => {
         .addEdge('askUsername', END)
         .compile({ id: 'async-validation' });
 
-      await graph.invoke({ user_message: '' });
+      await graph.invoke({ userMessage: '' });
 
-      let result = await graph.invoke({ user_message: 'admin' });
+      let result = await graph.invoke({ userMessage: 'admin' });
       expect(result.messages).toContain('Username already taken');
 
-      result = await graph.invoke({ user_message: 'myusername' });
+      result = await graph.invoke({ userMessage: 'myusername' });
       expect(graph.state.username).toBe('myusername');
       expect(graph.isDone).toBe(true);
     });
@@ -719,7 +719,7 @@ describe('Complex Combinations', () => {
           messages: ['What is your name?'],
         }),
         validate: (state: InferState<typeof State>, event: ChatEvent) => {
-          if (!event.user_message || event.user_message.length < 2) {
+          if (!event.userMessage || event.userMessage.length < 2) {
             return {
               isValid: false,
               errorMessage: 'Name must be at least 2 characters',
@@ -727,7 +727,7 @@ describe('Complex Combinations', () => {
           }
           return {
             isValid: true,
-            state: { name: event.user_message },
+            state: { name: event.userMessage },
           };
         },
       })
@@ -737,7 +737,7 @@ describe('Complex Combinations', () => {
           messages: [`Nice to meet you, ${state.name}! How old are you?`],
         }),
         validate: (state: InferState<typeof State>, event: ChatEvent) => {
-          const age = parseInt(event.user_message);
+          const age = parseInt(event.userMessage);
           if (isNaN(age) || age < 0) {
             return {
               isValid: false,
@@ -775,9 +775,9 @@ describe('Complex Combinations', () => {
       .addEdge('adult', END)
       .compile({ id: 'complex' });
 
-    await graph.invoke({ user_message: '' });
-    await graph.invoke({ user_message: 'Alice' });
-    await graph.invoke({ user_message: '25' });
+    await graph.invoke({ userMessage: '' });
+    await graph.invoke({ userMessage: 'Alice' });
+    await graph.invoke({ userMessage: '25' });
 
     expect(graph.state.name).toBe('Alice');
     expect(graph.state.age).toBe(25);
@@ -840,9 +840,9 @@ describe('Complex Combinations', () => {
       ],
     });
 
-    await graph.invoke({ user_message: '' });
-    await graph.invoke({ user_message: 'test@example.com' });
-    await graph.invoke({ user_message: '1234567890' });
+    await graph.invoke({ userMessage: '' });
+    await graph.invoke({ userMessage: 'test@example.com' });
+    await graph.invoke({ userMessage: '1234567890' });
 
     expect(graph.state.email).toBe('test@example.com');
     expect(graph.state.phone).toBe('1234567890');
