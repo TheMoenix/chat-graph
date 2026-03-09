@@ -4,12 +4,12 @@
  */
 
 import { StateSchema, InferState } from '../schema/state-schema';
-import { Tracker } from '../types/graph.types';
+import { NodeId, Tracker } from '../types/graph.types';
 
 /**
  * Snapshot of graph execution state at a point in time
  */
-export interface StateSnapshot<S extends StateSchema = any> {
+export interface StateSnapshot<S extends StateSchema = StateSchema> {
   /** Unique identifier for the flow */
   flowId: string;
   /** Version number (increments with each save) */
@@ -19,7 +19,7 @@ export interface StateSnapshot<S extends StateSchema = any> {
   /** User-defined state data */
   state: InferState<S>;
   /** Internal execution tracker */
-  tracker: Tracker<any>;
+  tracker: Tracker<readonly NodeId[]>;
 }
 
 /**

@@ -12,13 +12,14 @@ import { StateSchema } from '../schema/state-schema';
  */
 export class MemoryStorageAdapter extends StorageAdapter {
   // Shared storage - all instances see the same data
-  private static sharedStorage: Map<string, StateSnapshot[]> = new Map();
+  private static readonly sharedStorage: Map<string, StateSnapshot[]> =
+    new Map();
 
   async saveSnapshot<S extends StateSchema>(
     snapshot: StateSnapshot<S>
   ): Promise<void> {
     const flowSnapshots =
-      MemoryStorageAdapter.sharedStorage.get(snapshot.flowId) || [];
+      MemoryStorageAdapter.sharedStorage.get(snapshot.flowId) ?? [];
 
     // Add new snapshot to history
     flowSnapshots.push({
@@ -33,16 +34,16 @@ export class MemoryStorageAdapter extends StorageAdapter {
     flowId: string,
     version?: number
   ): Promise<StateSnapshot<S> | null> {
-    const flowSnapshots = MemoryStorageAdapter.sharedStorage.get(flowId);
+    const flowSnapshots = MemoryStorageAdapter.sharedStorage.get(flowId) ?? [];
 
-    if (!flowSnapshots || flowSnapshots.length === 0) {
+    if (flowSnapshots.length === 0) {
       return null;
     }
 
     if (version !== undefined) {
       // Find specific version
       const snapshot = flowSnapshots.find((s) => s.version === version);
-      return snapshot ? (snapshot as StateSnapshot<S>) : null;
+      return snapshot === undefined ? null : (snapshot as StateSnapshot<S>);
     }
 
     // Return latest version
@@ -53,7 +54,7 @@ export class MemoryStorageAdapter extends StorageAdapter {
     flowId: string,
     limit?: number
   ): Promise<StateSnapshot<S>[]> {
-    const flowSnapshots = MemoryStorageAdapter.sharedStorage.get(flowId) || [];
+    const flowSnapshots = MemoryStorageAdapter.sharedStorage.get(flowId) ?? [];
 
     // Sort by version descending (newest first)
     const sorted = [...flowSnapshots].sort((a, b) => b.version - a.version);
@@ -70,9 +71,9 @@ export class MemoryStorageAdapter extends StorageAdapter {
   }
 
   async pruneHistory(flowId: string, keepLast: number): Promise<void> {
-    const flowSnapshots = MemoryStorageAdapter.sharedStorage.get(flowId);
+    const flowSnapshots = MemoryStorageAdapter.sharedStorage.get(flowId) ?? [];
 
-    if (!flowSnapshots || flowSnapshots.length <= keepLast) {
+    if (flowSnapshots.length <= keepLast) {
       return; // Nothing to prune
     }
 
@@ -84,8 +85,7 @@ export class MemoryStorageAdapter extends StorageAdapter {
   }
 
   async getSnapshotCount(flowId: string): Promise<number> {
-    const flowSnapshots = MemoryStorageAdapter.sharedStorage.get(flowId);
-    return flowSnapshots ? flowSnapshots.length : 0;
+    return (MemoryStorageAdapter.sharedStorage.get(flowId) ?? []).length;
   }
 
   async flowExists(flowId: string): Promise<boolean> {

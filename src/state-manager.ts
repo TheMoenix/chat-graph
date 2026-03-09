@@ -4,7 +4,7 @@
  */
 
 import { StateSchema, InferState } from './schema/state-schema';
-import { Tracker } from './types/graph.types';
+import { NodeId, Tracker } from './types/graph.types';
 import { StorageAdapter, StateSnapshot } from './persistence/storage-adapter';
 import { MemoryStorageAdapter } from './persistence/memory-adapter';
 
@@ -12,16 +12,16 @@ import { MemoryStorageAdapter } from './persistence/memory-adapter';
  * Global state manager for managing flow state across instances
  * Provides versioned snapshots and persistence
  */
-export class StateManager<S extends StateSchema = any> {
-  private adapter: StorageAdapter;
-  private versionCounters: Map<string, number> = new Map();
+export class StateManager<S extends StateSchema = StateSchema> {
+  private readonly adapter: StorageAdapter;
+  private readonly versionCounters: Map<string, number> = new Map();
 
   /**
    * Create a new state manager
    * @param adapter Storage adapter to use (defaults to in-memory)
    */
   constructor(adapter?: StorageAdapter) {
-    this.adapter = adapter || new MemoryStorageAdapter();
+    this.adapter = adapter ?? new MemoryStorageAdapter();
   }
 
   /**
@@ -31,10 +31,10 @@ export class StateManager<S extends StateSchema = any> {
   async save(
     flowId: string,
     state: InferState<S>,
-    tracker: Tracker<any>
+    tracker: Tracker<readonly NodeId[]>
   ): Promise<number> {
     // Get next version number
-    const currentVersion = this.versionCounters.get(flowId) || 0;
+    const currentVersion = this.versionCounters.get(flowId) ?? 0;
     const newVersion = currentVersion + 1;
     this.versionCounters.set(flowId, newVersion);
 
@@ -60,8 +60,8 @@ export class StateManager<S extends StateSchema = any> {
     const snapshot = await this.adapter.loadSnapshot<S>(flowId, version);
 
     // Update version counter if we loaded a snapshot
-    if (snapshot) {
-      const currentMax = this.versionCounters.get(flowId) || 0;
+    if (snapshot !== null) {
+      const currentMax = this.versionCounters.get(flowId) ?? 0;
       this.versionCounters.set(flowId, Math.max(currentMax, snapshot.version));
     }
 
@@ -75,7 +75,7 @@ export class StateManager<S extends StateSchema = any> {
     flowId: string,
     limit?: number
   ): Promise<StateSnapshot<S>[]> {
-    return await this.adapter.loadHistory<S>(flowId, limit);
+    return this.adapter.loadHistory<S>(flowId, limit);
   }
 
   /**
@@ -109,14 +109,14 @@ export class StateManager<S extends StateSchema = any> {
    * Get the number of snapshots for a flow
    */
   async getSnapshotCount(flowId: string): Promise<number> {
-    return await this.adapter.getSnapshotCount(flowId);
+    return this.adapter.getSnapshotCount(flowId);
   }
 
   /**
    * Check if a flow exists in storage
    */
   async exists(flowId: string): Promise<boolean> {
-    return await this.adapter.flowExists(flowId);
+    return this.adapter.flowExists(flowId);
   }
 
   /**
@@ -132,7 +132,7 @@ export class StateManager<S extends StateSchema = any> {
    */
   async initializeVersionCounter(flowId: string): Promise<void> {
     const latest = await this.adapter.loadSnapshot(flowId);
-    if (latest) {
+    if (latest !== null) {
       this.versionCounters.set(flowId, latest.version);
     }
   }
@@ -148,9 +148,7 @@ let globalStateManager: StateManager | null = null;
  * Get or create the global state manager
  */
 export function getGlobalStateManager(adapter?: StorageAdapter): StateManager {
-  if (!globalStateManager) {
-    globalStateManager = new StateManager(adapter);
-  }
+  globalStateManager = globalStateManager ?? new StateManager(adapter);
   return globalStateManager;
 }
 
