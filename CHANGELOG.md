@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-03-10
+
+### Breaking
+
+- `ChatEvent.user_message` renamed to `ChatEvent.userMessage` — update all `invoke()` calls and event handlers to use `userMessage`
+
+### Fixed
+
+- Fixed bug where nodes without a `validate` function could skip the validation phase under certain conditions
+- `mergeState` is now always applied after a node action — previously it was skipped if the action returned a falsy value
+- Fixed edge routing to gracefully handle undefined edge targets instead of throwing
+- Removed spurious `console.warn` when `stateManager` is not configured on the graph
+- `restoreFromSnapshot()` no longer logs a warning when called without a `stateManager`
+
+### Added
+
+- Router functions used in edges can now be `async` (return a `Promise<nodeId>`)
+- `NodeId`, `EdgeTo`, and `RunnableEdgeTo` types are now exported for library consumers
+
+### Changed
+
+- `RouterCondition.value` is now typed against the schema state instead of `any`, improving type safety in static routers
+- Generic defaults for `ValidationResult`, `NodeValidate`, `RouterCondition`, `StaticRouter`, and related types changed from `any` to `StateSchema`
+
+## [0.4.1] - 2026-03-10
+
+### Removed
+
+- Removed `/tests` and `/examples` directories from the published package to reduce bundle size (these are still available in the GitHub repository)
+
+### Fixed
+
+- Fixed broken documentation link for the Node page
+
+### Changed
+
+- Restructured documentation: Action and Validate pages are now nested under the Node section for better organization
+
 ## [0.4.0] - 2026-02-04
 
 ### Changed
