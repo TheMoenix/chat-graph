@@ -13,6 +13,7 @@ export default [
       'examples/**',
       'tests/**',
       'docs/**',
+      '*.config.js',
     ],
   },
   js.configs.recommended,
