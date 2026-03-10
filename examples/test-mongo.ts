@@ -141,11 +141,11 @@ async function testMongoAdapter() {
       });
 
     // First invocation
-    await graph.invoke({ user_message: '' });
+    await graph.invoke({ userMessage: '' });
     console.log('   First invocation (action):', graph.state.messages);
 
     // Second invocation (validation)
-    await graph.invoke({ user_message: 'Alice' });
+    await graph.invoke({ userMessage: 'Alice' });
     console.log('   Second invocation (validation):', graph.state.messages);
 
     // Check that state was persisted
@@ -183,7 +183,7 @@ async function testMongoAdapter() {
       });
 
     // This should load the persisted state
-    await graph2.invoke({ user_message: '' });
+    await graph2.invoke({ userMessage: '' });
     console.log('✅ New instance loaded state:', graph2.state);
     console.log('   IsDone:', graph2.isDone);
     console.log();

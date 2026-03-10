@@ -32,7 +32,7 @@ const graph = new ChatGraphBuilder({ schema: State })
   .addEdge('hello', END)
   .compile({ id: 'session-1', storageAdapter: storage, autoSave: true });
 
-await graph.invoke({ user_message: '' });
+await graph.invoke({ userMessage: '' });
 ```
 
 ## Resume Later

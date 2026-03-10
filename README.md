@@ -43,7 +43,7 @@ const graph = new ChatGraphBuilder({ schema: State })
   .compile({ id: 'onboarding' });
 
 // 3) Run
-await graph.invoke({ user_message: 'John' });
+await graph.invoke({ userMessage: 'John' });
 console.log(graph.state.messages); // ["Nice to meet you, John!"]
 ```
 
@@ -57,7 +57,7 @@ const graph = new ChatGraphBuilder({ schema: State })
   // ...nodes/edges...
   .compile({ id: 'onboarding', storageAdapter: storage, autoSave: true });
 
-await graph.invoke({ user_message: 'Alice' });
+await graph.invoke({ userMessage: 'Alice' });
 // state is saved on each step; you can restore later
 await graph.restoreFromSnapshot();
 ```

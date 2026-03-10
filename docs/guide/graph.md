@@ -30,7 +30,7 @@ const graph = new ChatGraphBuilder({ schema: State })
   .addEdge('reply', END)
   .compile({ id: 'builder-demo' });
 
-await graph.invoke({ user_message: 'Alice' });
+await graph.invoke({ userMessage: 'Alice' });
 ```
 
 ## JSON-Style (Config)
@@ -67,5 +67,5 @@ const graph = new ChatGraph({
   ],
 });
 
-await graph.invoke({ user_message: 'Alice' });
+await graph.invoke({ userMessage: 'Alice' });
 ```

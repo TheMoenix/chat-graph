@@ -40,6 +40,6 @@ const graph = new ChatGraphBuilder({ schema: State })
   .addEdge('done', END)
   .compile({ id: 'onboarding' });
 
-await graph.invoke({ user_message: 'John' });
+await graph.invoke({ userMessage: 'John' });
 console.log(graph.state.messages);
 ```

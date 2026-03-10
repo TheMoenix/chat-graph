@@ -26,7 +26,7 @@ const flow = new ChatGraphBuilder({ schema: State })
   .addEdge('count', END)
   .compile({ id: 'state-demo' });
 
-await flow.invoke({ user_message: '' });
+await flow.invoke({ userMessage: '' });
 console.log(flow.state);
 ```
 

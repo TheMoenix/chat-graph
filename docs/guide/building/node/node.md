@@ -85,7 +85,7 @@ These nodes execute their action and immediately move to the next node without w
   id: 'ask_age',
   action: { message: 'How old are you?' },
   validate: (state, event) => {
-    const age = Number(event.user_message);
+    const age = Number(event.userMessage);
 
     if (!Number.isFinite(age) || age < 0) {
       return {
@@ -184,7 +184,7 @@ const flow = new ChatGraph({
     };
   },
   validate: (state, event) => {
-    const answer = event.user_message.toLowerCase();
+    const answer = event.userMessage.toLowerCase();
 
     if (answer === 'yes') {
       return {

@@ -18,7 +18,7 @@ This only can be used with nodes that expect user input (i.e., `autoAdvance` set
   id: 'age',
   action: { message: 'Enter age:' },
   validate: (s, e) => {
-    const n = Number(e.user_message);
+    const n = Number(e.userMessage);
     if (!Number.isFinite(n) || n < 0) return { isValid: false, errorMessage: 'Enter a valid age' };
     else if (n > 120) return { isValid: false, errorMessage: 'Age must be <= 120' };
     return { isValid: true, state: { age: n } };
