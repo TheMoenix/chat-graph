@@ -8,7 +8,7 @@ import { z } from 'zod';
 /**
  * Reducer configuration for a field
  */
-export type ReducerConfig<T = any> = {
+export type ReducerConfig<T> = {
   /** Reducer function that merges previous and new values */
   fn: (prevValue: T, newValue: T) => T;
 };
@@ -16,7 +16,7 @@ export type ReducerConfig<T = any> = {
 /**
  * Field configuration with optional reducer and default value
  */
-export type FieldConfig<T = any> = {
+export type FieldConfig<T = unknown> = {
   reducer?: ReducerConfig<T>;
   default?: () => T;
 };
@@ -31,18 +31,20 @@ const REDUCER_METADATA = Symbol('reducerMetadata');
  * Stores metadata for how fields should be merged
  */
 export class StateRegistry {
-  private fieldConfigs: Map<z.ZodType<any>, FieldConfig<any>> = new Map();
+  private readonly fieldConfigs: Map<z.ZodType, FieldConfig> = new Map();
 
   /**
    * Register a field configuration (reducer and/or default)
    */
-  registerField<T extends z.ZodType<any>>(
+  registerField<T extends z.ZodType>(
     schema: T,
     config: FieldConfig<z.infer<T>>
   ): T {
     // Store metadata directly on the schema object
-    (schema as any)[REDUCER_METADATA] = config;
-    this.fieldConfigs.set(schema, config);
+    (schema as unknown as Record<symbol, FieldConfig<z.infer<T>>>)[
+      REDUCER_METADATA
+    ] = config;
+    this.fieldConfigs.set(schema, config as FieldConfig<unknown>);
     return schema;
   }
 
@@ -50,15 +52,21 @@ export class StateRegistry {
    * Get field configuration for a schema
    */
   getConfig<T>(schema: z.ZodType<T>): FieldConfig<T> | undefined {
-    return (schema as any)[REDUCER_METADATA] || this.fieldConfigs.get(schema);
+    const fromMetadata = (
+      schema as unknown as Record<symbol, FieldConfig<T> | undefined>
+    )[REDUCER_METADATA];
+    return (
+      fromMetadata ??
+      (this.fieldConfigs.get(schema) as FieldConfig<T> | undefined)
+    );
   }
 
   /**
    * Check if a schema has a reducer
    */
-  hasReducer(schema: z.ZodType<any>): boolean {
+  hasReducer(schema: z.ZodType): boolean {
     const config = this.getConfig(schema);
-    return !!config?.reducer;
+    return config?.reducer !== undefined;
   }
 
   /**
@@ -73,11 +81,14 @@ export class StateRegistry {
 /**
  * Helper function to add registerReducer method to Zod schema instances
  */
-export function extendZodWithRegister() {
-  if (!(z.ZodType.prototype as any).registerReducer) {
-    (z.ZodType.prototype as any).registerReducer = function <
-      T extends z.ZodType<any>,
-    >(this: T, registry: StateRegistry, config: FieldConfig<z.infer<T>>): T {
+export function extendZodWithRegister(): void {
+  const proto = z.ZodType.prototype as unknown as Record<string, unknown>;
+  if (proto['registerReducer'] === undefined) {
+    proto['registerReducer'] = function <T extends z.ZodType>(
+      this: T,
+      registry: StateRegistry,
+      config: FieldConfig<z.infer<T>>
+    ): T {
       return registry.registerField(this, config);
     };
   }
@@ -89,7 +100,7 @@ extendZodWithRegister();
 // Type augmentation for TypeScript
 declare module 'zod' {
   interface ZodType {
-    registerReducer<T extends z.ZodType<any>>(
+    registerReducer<T extends z.ZodType>(
       this: T,
       registry: StateRegistry,
       config: FieldConfig<z.infer<T>>
@@ -102,7 +113,7 @@ declare module 'zod' {
  */
 export type StateSchema = z.ZodObject<{
   messages: z.ZodArray<z.ZodString>;
-  [key: string]: z.ZodTypeAny;
+  [key: string]: z.ZodType;
 }>;
 
 /**
@@ -119,14 +130,14 @@ export function createInitialState<S extends StateSchema>(
   registry: StateRegistry | undefined,
   overrides: Partial<z.infer<S>> = {}
 ): z.infer<S> {
-  if (!schema) {
+  if (schema === undefined) {
     return overrides as z.infer<S>;
   }
 
-  const initialState: any = { ...overrides };
+  const initialState: Record<string, unknown> = { ...overrides };
 
   // Add default values for fields not in overrides
-  if (registry && schema instanceof z.ZodObject) {
+  if (registry !== undefined && schema instanceof z.ZodObject) {
     const shape = schema.shape;
     for (const [key, fieldSchema] of Object.entries(shape)) {
       if (!(key in initialState)) {
@@ -141,7 +152,7 @@ export function createInitialState<S extends StateSchema>(
   // Parse with Zod to apply defaults and validate
   try {
     return schema.parse(initialState);
-  } catch (error) {
+  } catch {
     // If parsing fails, return the initial state as-is
     // This allows partial states during construction
     return initialState as z.infer<S>;
@@ -158,27 +169,27 @@ export function mergeState<S extends StateSchema>(
   currentState: z.infer<S>,
   updates: Partial<z.infer<S>>
 ): z.infer<S> {
-  if (!schema || !registry) {
+  if (schema === undefined || registry === undefined) {
     // No schema/registry - simple shallow merge
     return { ...currentState, ...updates } as z.infer<S>;
   }
 
-  const mergedState: any = { ...currentState };
+  const mergedState: Record<string, unknown> = { ...currentState };
 
   if (schema instanceof z.ZodObject) {
     const shape = schema.shape;
 
     for (const [key, newValue] of Object.entries(updates)) {
-      const fieldSchema = shape[key] as z.ZodType<any> | undefined;
-      const currentValue = (currentState as any)[key];
+      const fieldSchema = shape[key] as z.ZodType | undefined;
+      const currentValue = (currentState as Record<string, unknown>)[key];
 
-      if (fieldSchema) {
+      if (fieldSchema !== undefined) {
         const config = registry.getConfig(fieldSchema);
 
-        if (config?.reducer) {
+        if (config?.reducer !== undefined) {
           // Apply reducer function
           let prevValue = currentValue;
-          if (prevValue === undefined && config.default) {
+          if (prevValue === undefined && config.default !== undefined) {
             prevValue = config.default();
           }
           mergedState[key] = config.reducer.fn(prevValue, newValue);
