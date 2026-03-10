@@ -468,7 +468,6 @@ export class ChatGraph<
    */
   async restoreFromSnapshot(version?: number): Promise<boolean> {
     if (this.stateManager === undefined) {
-      console.warn('Cannot restore: stateManager not configured');
       return false;
     }
 
