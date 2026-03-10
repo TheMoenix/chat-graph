@@ -70,8 +70,8 @@ describe('JSON-based Router', () => {
         ],
       });
 
-      await graph.invoke({ user_message: '' });
-      await graph.invoke({ user_message: 'left' });
+      await graph.invoke({ userMessage: '' });
+      await graph.invoke({ userMessage: 'left' });
       expect(graph.state.messages).toContain('You chose left!');
     });
 
@@ -132,8 +132,8 @@ describe('JSON-based Router', () => {
         ],
       });
 
-      await graph.invoke({ user_message: '' });
-      await graph.invoke({ user_message: '15' });
+      await graph.invoke({ userMessage: '' });
+      await graph.invoke({ userMessage: '15' });
       expect(graph.state.messages).toContain('You are a minor');
 
       await storage.deleteFlow('router-test');
@@ -184,8 +184,8 @@ describe('JSON-based Router', () => {
         ],
       });
 
-      await graph2.invoke({ user_message: '' });
-      await graph2.invoke({ user_message: '70' });
+      await graph2.invoke({ userMessage: '' });
+      await graph2.invoke({ userMessage: '70' });
       expect(graph2.state.messages).toContain('You are a senior');
     });
 
@@ -242,8 +242,8 @@ describe('JSON-based Router', () => {
         ],
       });
 
-      await graph.invoke({ user_message: '' });
-      await graph.invoke({ user_message: 'hello world' });
+      await graph.invoke({ userMessage: '' });
+      await graph.invoke({ userMessage: 'hello world' });
       expect(graph.state.messages).toContain('Hello to you too!');
     });
 
@@ -300,8 +300,8 @@ describe('JSON-based Router', () => {
         ],
       });
 
-      await graph.invoke({ user_message: '' });
-      await graph.invoke({ user_message: 'test@example.com' });
+      await graph.invoke({ userMessage: '' });
+      await graph.invoke({ userMessage: 'test@example.com' });
       expect(graph.state.messages).toContain('Valid email!');
     });
 
@@ -358,8 +358,8 @@ describe('JSON-based Router', () => {
         ],
       });
 
-      await graph.invoke({ user_message: '' });
-      await graph.invoke({ user_message: 'blue' });
+      await graph.invoke({ userMessage: '' });
+      await graph.invoke({ userMessage: 'blue' });
       expect(graph.state.messages).toContain('Good choice!');
     });
   });
@@ -433,8 +433,8 @@ describe('JSON-based Router', () => {
         ],
       });
 
-      await graph.invoke({ user_message: '' });
-      await graph.invoke({ user_message: '85' });
+      await graph.invoke({ userMessage: '' });
+      await graph.invoke({ userMessage: '85' });
       expect(graph.state.messages).toContain('Good!');
     });
   });
@@ -493,8 +493,8 @@ describe('JSON-based Router', () => {
         ],
       });
 
-      await graph.invoke({ user_message: '' });
-      await graph.invoke({ user_message: 'random' });
+      await graph.invoke({ userMessage: '' });
+      await graph.invoke({ userMessage: 'random' });
       expect(graph.state.messages).toContain('Default path');
     });
 
@@ -545,8 +545,8 @@ describe('JSON-based Router', () => {
         ],
       });
 
-      await graph.invoke({ user_message: '' });
-      await graph.invoke({ user_message: 'random' });
+      await graph.invoke({ userMessage: '' });
+      await graph.invoke({ userMessage: 'random' });
       expect(graph.isDone).toBe(true);
     });
   });
@@ -595,8 +595,8 @@ describe('JSON-based Router', () => {
         ],
       });
 
-      await graph.invoke({ user_message: '' });
-      await graph.invoke({ user_message: 'left' });
+      await graph.invoke({ userMessage: '' });
+      await graph.invoke({ userMessage: 'left' });
       expect(graph.state.messages).toContain('Left!');
     });
 
@@ -631,7 +631,7 @@ describe('JSON-based Router', () => {
         ],
       });
 
-      await graph.invoke({ user_message: '' });
+      await graph.invoke({ userMessage: '' });
       expect(graph.state.messages).toContain('Second');
     });
   });
@@ -690,8 +690,8 @@ describe('JSON-based Router', () => {
         ],
       });
 
-      await graph.invoke({ user_message: '' });
-      await graph.invoke({ user_message: 'proceed' });
+      await graph.invoke({ userMessage: '' });
+      await graph.invoke({ userMessage: 'proceed' });
       expect(graph.state.messages).toContain('Processing...');
     });
 
@@ -748,8 +748,8 @@ describe('JSON-based Router', () => {
         ],
       });
 
-      await graph.invoke({ user_message: '' });
-      await graph.invoke({ user_message: 'hello there' });
+      await graph.invoke({ userMessage: '' });
+      await graph.invoke({ userMessage: 'hello there' });
       expect(graph.state.messages).toContain('Clean message!');
     });
 
@@ -806,8 +806,8 @@ describe('JSON-based Router', () => {
         ],
       });
 
-      await graph.invoke({ user_message: '' });
-      await graph.invoke({ user_message: 'red' });
+      await graph.invoke({ userMessage: '' });
+      await graph.invoke({ userMessage: 'red' });
       expect(graph.state.messages).toContain('Allowed color!');
     });
   });

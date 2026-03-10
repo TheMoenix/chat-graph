@@ -232,10 +232,10 @@ async function demo() {
     result =
       i % 2 === 0
         ? await flow.invoke({
-            user_message: userInput,
+            userMessage: userInput,
           })
         : await flow2.invoke({
-            user_message: userInput,
+            userMessage: userInput,
           });
 
     // Display bot messages
