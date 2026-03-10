@@ -14,6 +14,8 @@ import type {
   StaticRouter,
   RouterCondition,
   ExtractNodeIds,
+  RunnableEdgeTo,
+  EdgeTo,
 } from './types/graph.types';
 
 import { START, END } from './constants';
@@ -26,7 +28,7 @@ import {
   registry,
 } from './schema/state-schema';
 import { StateManager } from './state-manager';
-import { StorageAdapter } from './persistence/storage-adapter';
+import { StateSnapshot, StorageAdapter } from './persistence/storage-adapter';
 
 /**
  * Flow engine that executes conversation flows with two-phase nodes (action + validation)
@@ -48,18 +50,18 @@ import { StorageAdapter } from './persistence/storage-adapter';
  * ```
  */
 export class ChatGraph<
-  Schema extends StateSchema = any,
+  Schema extends StateSchema = StateSchema,
   Nodes extends readonly Node<Schema>[] = readonly [],
 > {
-  private nodes: Node<Schema, Runnable>[] = [];
+  private readonly nodes: Node<Schema, Runnable>[] = [];
   private readonly edges: Edges<Nodes, true> = new Map();
   declare private tracker: Tracker<Nodes>;
   declare private graphState: InferState<Schema>;
-  private schema?: Schema;
-  private registry?: StateRegistry;
-  private stateManager?: StateManager<Schema>;
-  private id: string;
-  private autoSave: boolean = false;
+  private readonly schema?: Schema;
+  private readonly registry?: StateRegistry;
+  private readonly stateManager?: StateManager<Schema>;
+  private readonly id: string;
+  private readonly autoSave: boolean = false;
 
   constructor(
     config: Graph<Nodes, false> & {
@@ -71,11 +73,11 @@ export class ChatGraph<
   ) {
     this.schema = config.schema;
     this.registry = config.registry;
-    this.autoSave = config.autoSave !== undefined ? config.autoSave : true;
+    this.autoSave = config.autoSave ?? true;
     this.id = config.id;
 
     // Initialize state manager if storageAdapter is provided
-    if (config.storageAdapter) {
+    if (config.storageAdapter !== undefined) {
       this.stateManager = new StateManager<Schema>(config.storageAdapter);
     }
 
@@ -90,7 +92,7 @@ export class ChatGraph<
     // Convert Node[] to ExecutableNode[] by processing actions and validations
     this.nodes = this.processNodes(config.nodes);
 
-    if (config.edges) {
+    if (config.edges.length > 0) {
       this.edges = this.processEdges(config.edges);
     }
 
@@ -98,16 +100,16 @@ export class ChatGraph<
     this.graphState = createInitialState(
       this.schema,
       this.registry,
-      config.initialState as any
+      config.initialState as Partial<InferState<Schema>>
     );
   }
   /** Current conversation state */
-  get state() {
+  get state(): InferState<Schema> {
     return { ...this.graphState };
   }
 
   /** Whether the flow has completed */
-  get isDone() {
+  get isDone(): boolean {
     return this.tracker.__isDone;
   }
 
@@ -118,20 +120,22 @@ export class ChatGraph<
     nodes: readonly Node<Schema>[]
   ): Node<Schema, Runnable>[] {
     return nodes.map((node) => {
-      if (node.autoAdvance)
+      if (node.autoAdvance === true) {
         return {
           id: node.id,
           action: this.createAction(node.action),
           autoAdvance: node.autoAdvance,
         };
-      else
+      } else {
         return {
           id: node.id,
           action: this.createAction(node.action),
-          validate: node.validate
-            ? this.createValidate(node.validate)
-            : undefined,
+          validate:
+            node.validate !== null && node.validate !== undefined
+              ? this.createValidate(node.validate)
+              : undefined,
         };
+      }
     });
   }
 
@@ -158,7 +162,7 @@ export class ChatGraph<
     return (state: InferState<Schema>): Partial<InferState<Schema>> =>
       ({
         messages: [this.interpolate(action.message, state)],
-      }) as any; // Partial<InferState<Schema>>
+      }) as unknown as Partial<InferState<Schema>>;
   }
 
   /**
@@ -172,17 +176,13 @@ export class ChatGraph<
     }
 
     // Array of validators (run all in sequence)
-    const rules = !validate.rules
-      ? []
-      : Array.isArray(validate.rules)
-        ? validate.rules
-        : [validate.rules];
+    const rules = validate.rules ?? [];
 
     return (
       _: InferState<Schema>,
       event: ChatEvent
     ): ValidationResult<Schema> => {
-      const input = event.userMessage || '';
+      const input = event.userMessage;
 
       // Run all validators
       for (const validator of rules) {
@@ -197,7 +197,7 @@ export class ChatGraph<
 
       // All passed - save to answerKey if specified
       const updates =
-        validate && 'answerKey' in validate && validate.answerKey
+        validate.answerKey !== null && validate.answerKey !== undefined
           ? { [validate.answerKey]: input }
           : {};
 
@@ -212,15 +212,8 @@ export class ChatGraph<
    * Creates a router function from config (supports both functions and JSON-based routers)
    */
   private createRouter(
-    router:
-      | ExtractNodeIds<Nodes>
-      | ((state: InferState<Schema>) => ExtractNodeIds<Nodes> | typeof END)
-      | StaticRouter<Nodes, Schema>
-      | typeof END
-  ):
-    | ExtractNodeIds<Nodes>
-    | ((state: InferState<Schema>) => ExtractNodeIds<Nodes> | typeof END)
-    | typeof END {
+    router: EdgeTo<Nodes, Schema>
+  ): RunnableEdgeTo<Nodes, Schema> {
     // If it's already a function or string/END, return as is
     if (typeof router === 'function' || typeof router === 'string') {
       return router;
@@ -247,52 +240,52 @@ export class ChatGraph<
     state: InferState<Schema>,
     condition: RouterCondition<Nodes, Schema>
   ): boolean {
-    const fieldValue = (state as any)[condition.field];
+    const currentStateValue = state[condition.field];
     const { operator, value } = condition;
 
     switch (operator) {
       case 'equals':
-        return fieldValue == value;
+        return currentStateValue === value;
       case 'not_equals':
-        return fieldValue != value;
+        return currentStateValue !== value;
       case 'gt':
-        return fieldValue > value;
+        return currentStateValue > value;
       case 'gte':
-        return fieldValue >= value;
+        return currentStateValue >= value;
       case 'lt':
-        return fieldValue < value;
+        return currentStateValue < value;
       case 'lte':
-        return fieldValue <= value;
+        return currentStateValue <= value;
       case 'contains':
-        if (typeof fieldValue === 'string') {
-          return fieldValue.includes(value);
+        if (typeof currentStateValue === 'string') {
+          return currentStateValue.includes(value as string);
         }
-        if (Array.isArray(fieldValue)) {
-          return fieldValue.includes(value);
+        if (Array.isArray(currentStateValue)) {
+          return currentStateValue.includes(value);
         }
         return false;
       case 'not_contains':
-        if (typeof fieldValue === 'string') {
-          return !fieldValue.includes(value);
+        if (typeof currentStateValue === 'string') {
+          return !currentStateValue.includes(value as string);
         }
-        if (Array.isArray(fieldValue)) {
-          return !fieldValue.includes(value);
+        if (Array.isArray(currentStateValue)) {
+          return !currentStateValue.includes(value);
         }
         return true;
       case 'regex':
-        if (typeof fieldValue === 'string') {
-          const regex = new RegExp(value);
-          return regex.test(fieldValue);
+        if (typeof currentStateValue === 'string') {
+          const regex = new RegExp(value as string);
+          return regex.test(currentStateValue);
         }
         return false;
       case 'in':
         if (Array.isArray(value)) {
-          return value.includes(fieldValue);
+          return value.includes(currentStateValue);
         }
         return false;
       case 'not_in':
         if (Array.isArray(value)) {
-          return !value.includes(fieldValue);
+          return !value.includes(currentStateValue);
         }
         return true;
       default:
@@ -304,9 +297,8 @@ export class ChatGraph<
    * Interpolates variables in text using {key} syntax
    */
   private interpolate(text: string, state: InferState<Schema>): string {
-    return text.replace(
-      /\{\{(\w+)\}\}/g,
-      (_, key) => (state as any)[key] || ''
+    return text.replace(/\{\{(\w+)\}\}/g, (_, key: string) =>
+      String(state[key])
     );
   }
 
@@ -317,9 +309,9 @@ export class ChatGraph<
    * @returns The updated state
    */
   async invoke(event: ChatEvent): Promise<InferState<Schema>> {
-    if (this.stateManager) {
+    if (this.stateManager !== undefined) {
       const snapshot = await this.stateManager.load(this.id);
-      if (snapshot) {
+      if (snapshot !== null) {
         this.graphState = snapshot.state;
         this.tracker = snapshot.tracker as Tracker<Nodes>;
       }
@@ -336,7 +328,10 @@ export class ChatGraph<
     await this.executeNode(event);
 
     // If both phases complete (action taken + validated), move to next node
-    if (this.tracker.__isActionTaken && this.tracker.__isResponseValid) {
+    if (
+      this.tracker.__isActionTaken === true &&
+      this.tracker.__isResponseValid === true
+    ) {
       await this.getNextNode();
 
       // Check if flow is done
@@ -361,17 +356,15 @@ export class ChatGraph<
   private async executeNode(event: ChatEvent): Promise<void> {
     const node = this.nodes.find((n) => n.id === this.tracker.__currentNodeId);
 
-    if (!node) {
+    if (node === undefined) {
       console.warn(`Node not found: ${this.tracker.__currentNodeId}`);
       return;
     }
 
-    if (!this.tracker.__isActionTaken) {
+    if (this.tracker.__isActionTaken === false) {
       await this.executeNodeAction(node, event);
-    } else if (!this.tracker.__isResponseValid && node.validate) {
+    } else if (this.tracker.__isResponseValid === false) {
       await this.executeNodeValidation(node, event);
-    } else if (!node.validate) {
-      this.tracker.__isResponseValid = true;
     }
   }
 
@@ -382,23 +375,20 @@ export class ChatGraph<
     const stateUpdate = await node.action(this.graphState, event);
     this.tracker.__isActionTaken = true;
 
-    // Merge state using schema reducers if available
-    if (stateUpdate) {
-      // Apply state update with reducers (no runtime validation)
-      this.graphState = mergeState(
-        this.schema,
-        this.registry,
-        this.graphState,
-        stateUpdate
-      );
-    }
+    // Apply state update with reducers (no runtime validation)
+    this.graphState = mergeState(
+      this.schema,
+      this.registry,
+      this.graphState,
+      stateUpdate
+    );
 
-    if (node.autoAdvance) {
+    if (node.autoAdvance === true) {
       this.tracker.__isResponseValid = true;
     }
 
     // Auto-save snapshot if enabled
-    if (this.autoSave && this.stateManager) {
+    if (this.autoSave === true && this.stateManager !== undefined) {
       await this.stateManager.save(this.id, this.graphState, this.tracker);
     }
   }
@@ -407,7 +397,7 @@ export class ChatGraph<
     node: Node<Schema, Runnable>,
     event: ChatEvent
   ): Promise<void> {
-    if (!node.validate) {
+    if (node.validate === null || node.validate === undefined) {
       // No validation needed, mark as valid
       this.tracker.__isResponseValid = true;
       return;
@@ -416,7 +406,7 @@ export class ChatGraph<
     const validationResult = await node.validate(this.graphState, event);
 
     // Merge state using schema reducers if available
-    if (validationResult.state) {
+    if (validationResult.state !== undefined) {
       // Apply state update with reducers (no runtime validation)
       this.graphState = mergeState(
         this.schema,
@@ -428,14 +418,14 @@ export class ChatGraph<
 
     if (!validationResult.isValid) {
       // Add error message to state messages if validation failed
-      if (validationResult.errorMessage) {
+      if (validationResult.errorMessage !== undefined) {
         this.graphState = mergeState(
           this.schema,
           this.registry,
           this.graphState,
           {
             messages: [validationResult.errorMessage],
-          } as any // Partial<InferState<Schema>>
+          } as unknown as Partial<InferState<Schema>>
         );
       }
     } else {
@@ -443,7 +433,7 @@ export class ChatGraph<
       this.tracker.__isResponseValid = true;
 
       // Auto-save snapshot if enabled
-      if (this.autoSave && this.stateManager) {
+      if (this.autoSave === true && this.stateManager !== undefined) {
         await this.stateManager.save(this.id, this.graphState, this.tracker);
       }
     }
@@ -453,8 +443,15 @@ export class ChatGraph<
    * Determines the next node based on edges and conditional routing
    */
   private async getNextNode(): Promise<void> {
-    if (this.edges.has(this.tracker.__currentNodeId || START)) {
-      const to = this.edges.get(this.tracker.__currentNodeId || START)!;
+    if (this.edges.has(this.tracker.__currentNodeId)) {
+      const to = this.edges.get(this.tracker.__currentNodeId);
+      if (to === undefined) {
+        console.warn(
+          `Edge target not found for node: ${this.tracker.__currentNodeId}`
+        );
+        this.tracker.__currentNodeId = END;
+        return;
+      }
       if (typeof to === 'function') {
         this.tracker.__currentNodeId = await to(this.graphState);
       } else {
@@ -470,13 +467,13 @@ export class ChatGraph<
    * @param version Optional version to restore (defaults to latest)
    */
   async restoreFromSnapshot(version?: number): Promise<boolean> {
-    if (!this.stateManager) {
+    if (this.stateManager === undefined) {
       console.warn('Cannot restore: stateManager not configured');
       return false;
     }
 
     const snapshot = await this.stateManager.load(this.id, version);
-    if (!snapshot) {
+    if (snapshot === null) {
       return false;
     }
 
@@ -488,28 +485,28 @@ export class ChatGraph<
   /**
    * Get the complete history of snapshots for this flow
    */
-  async getSnapshotHistory(limit?: number) {
-    if (!this.stateManager) {
+  async getSnapshotHistory(limit?: number): Promise<StateSnapshot<Schema>[]> {
+    if (this.stateManager === undefined) {
       return [];
     }
-    return await this.stateManager.getHistory(this.id, limit);
+    return this.stateManager.getHistory(this.id, limit);
   }
 
   /**
    * Manually save a snapshot
    */
   async saveSnapshot(): Promise<number | null> {
-    if (!this.stateManager) {
+    if (this.stateManager === undefined) {
       return null;
     }
-    return await this.stateManager.save(this.id, this.graphState, this.tracker);
+    return this.stateManager.save(this.id, this.graphState, this.tracker);
   }
 
   /**
    * Delete all snapshots for this flow
    */
   async deleteSnapshots(): Promise<void> {
-    if (!this.stateManager) {
+    if (this.stateManager === undefined) {
       return;
     }
     await this.stateManager.delete(this.id);
@@ -556,20 +553,20 @@ export class ChatGraphBuilder<
   Schema extends StateSchema,
   Nodes extends Node<Schema>[] = [],
 > {
-  private schema: Schema;
-  private registry: StateRegistry;
-  private nodes: Node<Schema>[] = [];
-  private edges: Edges<Nodes> = [];
+  private readonly schema: Schema;
+  private readonly registry: StateRegistry;
+  private readonly nodes: Node<Schema>[] = [];
+  private readonly edges: Edges<Nodes> = [];
 
   constructor({
     schema,
-    registry: StateRegistry,
+    registry: stateRegistry,
   }: {
     schema: Schema;
     registry?: StateRegistry;
   }) {
     this.schema = schema;
-    this.registry = StateRegistry || registry;
+    this.registry = stateRegistry ?? registry;
   }
 
   /**
@@ -582,7 +579,7 @@ export class ChatGraphBuilder<
     node: NewNode
   ): ChatGraphBuilder<Schema, [...Nodes, NewNode]> {
     this.nodes.push(node);
-    return this as any; // ChatGraphBuilder<Schema, [...Nodes, NewNode]>
+    return this as unknown as ChatGraphBuilder<Schema, [...Nodes, NewNode]>;
   }
 
   /**

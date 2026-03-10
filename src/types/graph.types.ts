@@ -181,13 +181,18 @@ export type StaticRouter<
 type RouterNode<
   Nodes extends readonly NodeId[],
   Schema extends StateSchema = StateSchema,
-> = (state: InferState<Schema>) => Nodes[number]['id'] | typeof END;
+> = (
+  state: InferState<Schema>
+) =>
+  | Nodes[number]['id']
+  | typeof END
+  | Promise<Nodes[number]['id'] | typeof END>;
 
 type EdgeFrom<Nodes extends readonly NodeId[]> =
   | ExtractNodeIds<Nodes>
   | typeof START;
 
-type EdgeTo<
+export type EdgeTo<
   Nodes extends readonly NodeId[],
   Schema extends StateSchema = StateSchema,
 > =
@@ -196,7 +201,7 @@ type EdgeTo<
   | StaticRouter<Nodes, Schema>
   | typeof END;
 
-type RunnableEdgeTo<
+export type RunnableEdgeTo<
   Nodes extends readonly NodeId[],
   Schema extends StateSchema = StateSchema,
 > = ExtractNodeIds<Nodes> | RouterNode<Nodes, Schema> | typeof END;
