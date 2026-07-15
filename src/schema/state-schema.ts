@@ -170,8 +170,22 @@ export function mergeState<S extends StateSchema>(
   updates: Partial<z.infer<S>>
 ): z.infer<S> {
   if (schema === undefined || registry === undefined) {
-    // No schema/registry - simple shallow merge
-    return { ...currentState, ...updates } as z.infer<S>;
+    // No schema/registry — concatenate arrays, shallow-merge everything else.
+    // This mirrors what a standard messages reducer does so that multiple nodes
+    // processed within a single invoke() call (e.g. autoAdvance loops) all have
+    // their messages preserved rather than overwritten.
+    const result: Record<string, unknown> = { ...currentState };
+    for (const [key, value] of Object.entries(
+      updates as Record<string, unknown>
+    )) {
+      const current = result[key];
+      if (Array.isArray(value) && Array.isArray(current)) {
+        result[key] = [...current, ...value];
+      } else {
+        result[key] = value;
+      }
+    }
+    return result as z.infer<S>;
   }
 
   const mergedState: Record<string, unknown> = { ...currentState };
