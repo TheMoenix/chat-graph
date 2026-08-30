@@ -31,6 +31,42 @@ import { StateManager } from './state-manager';
 import { StateSnapshot, StorageAdapter } from './persistence/storage-adapter';
 
 /**
+ * Raised when a single turn executes more nodes than the graph allows.
+ *
+ * Cyclic routing is supported and useful — a flow can park on a node and
+ * repeat itself until something external changes. But a cycle in which every
+ * node is `autoAdvance` never yields to wait for input, so it would otherwise
+ * run until the process runs out of memory, taking down every other
+ * conversation that process was handling.
+ *
+ * The bound is per turn, not per flow, so a cycle through a node that waits
+ * for input keeps working indefinitely.
+ */
+export class TurnLimitExceededError extends Error {
+  constructor(
+    readonly flowId: string,
+    readonly limit: number,
+    readonly path: string[]
+  ) {
+    super(
+      `Flow "${flowId}" executed more than ${limit} nodes in a single turn. ` +
+        `This usually means a cycle of autoAdvance nodes, which never waits ` +
+        `for input: ${TurnLimitExceededError.describe(path)}`
+    );
+    this.name = 'TurnLimitExceededError';
+    // Restore the prototype chain so `instanceof` works when compiled to ES5
+    Object.setPrototypeOf(this, TurnLimitExceededError.prototype);
+  }
+
+  /** Renders the tail of the path, which is where a cycle is visible */
+  private static describe(path: string[]): string {
+    const tail = path.slice(-10);
+    const prefix = path.length > tail.length ? '... -> ' : '';
+    return `${prefix}${tail.join(' -> ')}`;
+  }
+}
+
+/**
  * Flow engine that executes conversation flows with two-phase nodes (action + validation)
  *
  * @example
@@ -68,6 +104,9 @@ export class ChatGraph<
    * that version is detected rather than overwritten.
    */
   private loadedVersion = 0;
+  /** Node ids executed during the current turn. Never persisted. */
+  private turnPath: string[] = [];
+  private readonly maxNodesPerTurn: number;
   private readonly id: string;
   private readonly autoSave: boolean = false;
 
@@ -77,11 +116,18 @@ export class ChatGraph<
       registry?: StateRegistry;
       storageAdapter?: StorageAdapter;
       autoSave?: boolean;
+      /**
+       * Most nodes one turn may execute before {@link TurnLimitExceededError}
+       * is thrown. Defaults to 50 — well above any legitimate chain of
+       * `autoAdvance` nodes, well below anything that costs real memory.
+       */
+      maxNodesPerTurn?: number;
     }
   ) {
     this.schema = config.schema;
     this.registry = config.registry;
     this.autoSave = config.autoSave ?? true;
+    this.maxNodesPerTurn = config.maxNodesPerTurn ?? 50;
     this.id = config.id;
 
     // Initialize state manager if storageAdapter is provided
@@ -327,6 +373,7 @@ export class ChatGraph<
    */
   async invoke(event: ChatEvent): Promise<InferState<Schema>> {
     this.emitted = [];
+    this.turnPath = [];
 
     if (this.stateManager !== undefined) {
       const snapshot = await this.stateManager.load(this.id);
@@ -381,6 +428,13 @@ export class ChatGraph<
     if (node === undefined) {
       console.warn(`Node not found: ${this.tracker.__currentNodeId}`);
       return;
+    }
+
+    this.turnPath.push(node.id);
+    if (this.turnPath.length > this.maxNodesPerTurn) {
+      throw new TurnLimitExceededError(this.id, this.maxNodesPerTurn, [
+        ...this.turnPath,
+      ]);
     }
 
     if (this.tracker.__isActionTaken === false) {
@@ -652,6 +706,7 @@ export class ChatGraphBuilder<
     storageAdapter?: StorageAdapter;
     autoSave?: boolean;
     initialState?: Partial<InferState<Schema>>;
+    maxNodesPerTurn?: number;
   }): ChatGraph<Schema, Nodes> {
     return new ChatGraph<Schema, Nodes>({
       ...config,
