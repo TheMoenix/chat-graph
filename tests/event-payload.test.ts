@@ -142,9 +142,7 @@ describe('ChatEvent.payload', () => {
     const graph = new ChatGraph<any, any>({
       id: 'payload-snapshot',
       storageAdapter: storage,
-      nodes: [
-        { id: 'a', action: { message: 'a' }, autoAdvance: true },
-      ] as any,
+      nodes: [{ id: 'a', action: { message: 'a' }, autoAdvance: true }] as any,
       edges: [
         { from: START, to: 'a' },
         { from: 'a', to: END },

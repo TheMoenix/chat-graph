@@ -3,7 +3,11 @@
  * Requires mongodb package: npm install mongodb
  */
 
-import { StorageAdapter, StateSnapshot } from './storage-adapter';
+import {
+  StorageAdapter,
+  StateSnapshot,
+  VersionConflictError,
+} from './storage-adapter';
 import { StateSchema } from '../schema/state-schema';
 
 // Minimal interfaces for MongoDB — avoids compile-time dependency when mongodb is not installed.
@@ -17,7 +21,10 @@ interface MongoDocument extends Record<string, unknown> {
 }
 
 interface MongoCollectionInterface {
-  createIndex(indexSpec: Record<string, unknown>): Promise<string>;
+  createIndex(
+    indexSpec: Record<string, unknown>,
+    options?: Record<string, unknown>
+  ): Promise<string>;
   insertOne(doc: Record<string, unknown>): Promise<unknown>;
   findOne(
     filter: Record<string, unknown>,
@@ -106,6 +113,10 @@ export class MongoStorageAdapter extends StorageAdapter {
       await collection.createIndex({ flowId: 1, version: -1 });
       await collection.createIndex({ flowId: 1 });
 
+      // Enforce one snapshot per (flow, version) at the database, so the
+      // guarantee does not rest solely on the `_id` naming convention
+      await collection.createIndex({ flowId: 1, version: 1 }, { unique: true });
+
       this.client = client;
       this.db = db;
       this.collection = collection;
@@ -150,11 +161,30 @@ export class MongoStorageAdapter extends StorageAdapter {
   ): Promise<void> {
     await this.ensureConnected();
 
-    await this.getCollection().insertOne({
-      ...snapshot,
-      timestamp: new Date(snapshot.timestamp),
-      _id: `${snapshot.flowId}_v${snapshot.version}`, // Unique ID
-    });
+    try {
+      await this.getCollection().insertOne({
+        ...snapshot,
+        timestamp: new Date(snapshot.timestamp),
+        _id: `${snapshot.flowId}_v${snapshot.version}`, // Unique ID
+      });
+    } catch (error) {
+      // A duplicate key means another process already wrote this version.
+      // Surface it as the engine's typed signal rather than a driver error,
+      // so a host can tell it apart from the database being unreachable.
+      if (MongoStorageAdapter.isDuplicateKeyError(error)) {
+        throw new VersionConflictError(snapshot.flowId, snapshot.version);
+      }
+      throw error;
+    }
+  }
+
+  /** MongoDB reports a unique-index violation as error code 11000 */
+  private static isDuplicateKeyError(error: unknown): boolean {
+    if (typeof error !== 'object' || error === null) {
+      return false;
+    }
+    const code = (error as { code?: unknown }).code;
+    return code === 11000 || code === '11000';
   }
 
   async loadSnapshot<S extends StateSchema>(

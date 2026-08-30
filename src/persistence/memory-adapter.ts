@@ -3,7 +3,11 @@
  * Stores all snapshots in memory (data is lost when process ends)
  */
 
-import { StorageAdapter, StateSnapshot } from './storage-adapter';
+import {
+  StorageAdapter,
+  StateSnapshot,
+  VersionConflictError,
+} from './storage-adapter';
 import { StateSchema } from '../schema/state-schema';
 
 /**
@@ -21,13 +25,48 @@ export class MemoryStorageAdapter extends StorageAdapter {
     const flowSnapshots =
       MemoryStorageAdapter.sharedStorage.get(snapshot.flowId) ?? [];
 
+    // Reject a version that already exists — two processes both advancing the
+    // same conversation must not silently produce two snapshots at one version
+    if (flowSnapshots.some((s) => s.version === snapshot.version)) {
+      throw new VersionConflictError(snapshot.flowId, snapshot.version);
+    }
+
     // Add new snapshot to history
-    flowSnapshots.push({
-      ...snapshot,
-      timestamp: new Date(snapshot.timestamp), // Ensure Date object
-    });
+    flowSnapshots.push(MemoryStorageAdapter.copy(snapshot));
 
     MemoryStorageAdapter.sharedStorage.set(snapshot.flowId, flowSnapshots);
+  }
+
+  /**
+   * Copies a snapshot on the way in and out of storage.
+   *
+   * A stored snapshot must not alias the live graph's `state` and `tracker`,
+   * which the engine mutates in place. Without this, two graphs that load the
+   * same snapshot share one tracker object and overwrite each other's node
+   * pointer — which is precisely the concurrency this adapter exists to let
+   * you test. A real backend serializes, so this matches production behaviour.
+   */
+  private static copy<S extends StateSchema>(
+    snapshot: StateSnapshot<S>
+  ): StateSnapshot<S> {
+    return {
+      ...snapshot,
+      timestamp: new Date(snapshot.timestamp), // Ensure Date object
+      state: MemoryStorageAdapter.deepClone(snapshot.state),
+      tracker: MemoryStorageAdapter.deepClone(snapshot.tracker),
+    };
+  }
+
+  /** structuredClone where available (Node 17+), JSON round-trip on Node 16 */
+  private static deepClone<T>(value: T): T {
+    const clone = (globalThis as { structuredClone?: <V>(v: V) => V })
+      .structuredClone;
+
+    if (clone !== undefined) {
+      return clone(value);
+    }
+
+    return JSON.parse(JSON.stringify(value)) as T;
   }
 
   async loadSnapshot<S extends StateSchema>(
@@ -43,11 +82,15 @@ export class MemoryStorageAdapter extends StorageAdapter {
     if (version !== undefined) {
       // Find specific version
       const snapshot = flowSnapshots.find((s) => s.version === version);
-      return snapshot === undefined ? null : (snapshot as StateSnapshot<S>);
+      return snapshot === undefined
+        ? null
+        : MemoryStorageAdapter.copy(snapshot as StateSnapshot<S>);
     }
 
     // Return latest version
-    return flowSnapshots[flowSnapshots.length - 1] as StateSnapshot<S>;
+    return MemoryStorageAdapter.copy(
+      flowSnapshots[flowSnapshots.length - 1] as StateSnapshot<S>
+    );
   }
 
   async loadHistory<S extends StateSchema>(
@@ -59,11 +102,15 @@ export class MemoryStorageAdapter extends StorageAdapter {
     // Sort by version descending (newest first)
     const sorted = [...flowSnapshots].sort((a, b) => b.version - a.version);
 
+    const copies = (sorted as StateSnapshot<S>[]).map((s) =>
+      MemoryStorageAdapter.copy(s)
+    );
+
     if (limit !== undefined && limit > 0) {
-      return sorted.slice(0, limit) as StateSnapshot<S>[];
+      return copies.slice(0, limit);
     }
 
-    return sorted as StateSnapshot<S>[];
+    return copies;
   }
 
   async deleteFlow(flowId: string): Promise<void> {

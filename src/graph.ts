@@ -62,6 +62,12 @@ export class ChatGraph<
   private readonly stateManager?: StateManager<Schema>;
   /** Messages produced during the current turn. Never persisted. */
   private emitted: string[] = [];
+  /**
+   * Version of the snapshot this instance is working from. The next save
+   * writes `loadedVersion + 1`, so a concurrent writer that already claimed
+   * that version is detected rather than overwritten.
+   */
+  private loadedVersion = 0;
   private readonly id: string;
   private readonly autoSave: boolean = false;
 
@@ -327,6 +333,9 @@ export class ChatGraph<
       if (snapshot !== null) {
         this.graphState = snapshot.state;
         this.tracker = snapshot.tracker as Tracker<Nodes>;
+        this.loadedVersion = snapshot.version;
+      } else {
+        this.loadedVersion = 0;
       }
     }
 
@@ -420,8 +429,8 @@ export class ChatGraph<
     }
 
     // Auto-save snapshot if enabled
-    if (this.autoSave === true && this.stateManager !== undefined) {
-      await this.stateManager.save(this.id, this.graphState, this.tracker);
+    if (this.autoSave === true) {
+      await this.persistSnapshot();
     }
   }
 
@@ -455,10 +464,32 @@ export class ChatGraph<
       this.tracker.__isResponseValid = true;
 
       // Auto-save snapshot if enabled
-      if (this.autoSave === true && this.stateManager !== undefined) {
-        await this.stateManager.save(this.id, this.graphState, this.tracker);
+      if (this.autoSave === true) {
+        await this.persistSnapshot();
       }
     }
+  }
+
+  /**
+   * Writes the current state as the version after the one this instance loaded,
+   * and tracks it so later saves within the same turn keep advancing.
+   *
+   * Lets {@link VersionConflictError} propagate: the engine does not retry,
+   * because only the host knows whether re-processing its input is safe.
+   */
+  private async persistSnapshot(): Promise<number | null> {
+    if (this.stateManager === undefined) {
+      return null;
+    }
+
+    const version = await this.stateManager.save(
+      this.id,
+      this.graphState,
+      this.tracker,
+      this.loadedVersion
+    );
+    this.loadedVersion = version;
+    return version;
   }
 
   /**
@@ -500,6 +531,7 @@ export class ChatGraph<
 
     this.graphState = snapshot.state;
     this.tracker = snapshot.tracker as Tracker<Nodes>;
+    this.loadedVersion = snapshot.version;
     return true;
   }
 
@@ -517,10 +549,7 @@ export class ChatGraph<
    * Manually save a snapshot
    */
   async saveSnapshot(): Promise<number | null> {
-    if (this.stateManager === undefined) {
-      return null;
-    }
-    return this.stateManager.save(this.id, this.graphState, this.tracker);
+    return this.persistSnapshot();
   }
 
   /**

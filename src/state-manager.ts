@@ -14,7 +14,6 @@ import { MemoryStorageAdapter } from './persistence/memory-adapter';
  */
 export class StateManager<S extends StateSchema = StateSchema> {
   private readonly adapter: StorageAdapter;
-  private readonly versionCounters: Map<string, number> = new Map();
 
   /**
    * Create a new state manager
@@ -25,18 +24,27 @@ export class StateManager<S extends StateSchema = StateSchema> {
   }
 
   /**
-   * Save a new snapshot for a flow
-   * Automatically increments version number
+   * Save a new snapshot for a flow at the version after `baseVersion`
+   *
+   * The version is derived from the snapshot the caller loaded, not from
+   * process memory: that is what makes a concurrent write detectable. Two
+   * processes that both loaded version N both attempt N+1, and the storage
+   * adapter rejects the loser with a {@link VersionConflictError}.
+   *
+   * @param baseVersion Version this save builds on. Omit to read the current
+   *   latest from storage first, which is convenient for direct callers but
+   *   offers no protection against a concurrent writer.
+   * @throws {VersionConflictError} If the resulting version already exists
    */
   async save(
     flowId: string,
     state: InferState<S>,
-    tracker: Tracker<readonly NodeId[]>
+    tracker: Tracker<readonly NodeId[]>,
+    baseVersion?: number
   ): Promise<number> {
-    // Get next version number
-    const currentVersion = this.versionCounters.get(flowId) ?? 0;
+    const currentVersion =
+      baseVersion ?? (await this.adapter.loadSnapshot(flowId))?.version ?? 0;
     const newVersion = currentVersion + 1;
-    this.versionCounters.set(flowId, newVersion);
 
     const snapshot: StateSnapshot<S> = {
       flowId,
@@ -57,15 +65,7 @@ export class StateManager<S extends StateSchema = StateSchema> {
     flowId: string,
     version?: number
   ): Promise<StateSnapshot<S> | null> {
-    const snapshot = await this.adapter.loadSnapshot<S>(flowId, version);
-
-    // Update version counter if we loaded a snapshot
-    if (snapshot !== null) {
-      const currentMax = this.versionCounters.get(flowId) ?? 0;
-      this.versionCounters.set(flowId, Math.max(currentMax, snapshot.version));
-    }
-
-    return snapshot;
+    return this.adapter.loadSnapshot<S>(flowId, version);
   }
 
   /**
@@ -83,15 +83,12 @@ export class StateManager<S extends StateSchema = StateSchema> {
    */
   async delete(flowId: string): Promise<void> {
     await this.adapter.deleteFlow(flowId);
-    this.versionCounters.delete(flowId);
   }
 
   /**
    * Clear all data (useful for testing)
    */
   async clear(): Promise<void> {
-    this.versionCounters.clear();
-
     // If using memory adapter, clear it
     if (this.adapter instanceof MemoryStorageAdapter) {
       this.adapter.clearAll();
@@ -124,17 +121,6 @@ export class StateManager<S extends StateSchema = StateSchema> {
    */
   getAdapter(): StorageAdapter {
     return this.adapter;
-  }
-
-  /**
-   * Initialize version counter from storage
-   * Useful when manager is recreated
-   */
-  async initializeVersionCounter(flowId: string): Promise<void> {
-    const latest = await this.adapter.loadSnapshot(flowId);
-    if (latest !== null) {
-      this.versionCounters.set(flowId, latest.version);
-    }
   }
 }
 
