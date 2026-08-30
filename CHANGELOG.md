@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-08-30
+
+### Added
+
+- `ChatGraph.emittedMessages` — the messages produced by the most recent `invoke()`, in order. Cleared at the start of every turn and never persisted, so a restored snapshot starts empty and a replayed turn does not re-send old text. `state.messages` keeps its existing behaviour; hosts should send `emittedMessages` instead
+- `ChatEvent.payload?: Record<string, unknown>` — structured input alongside the message (a button's stable id, a selected row, coordinates). Passed through untouched to node actions, validators and router functions; never read by the engine and never persisted
+- Router functions now receive the `ChatEvent` as a second argument: `(state, event) => nodeId`. Existing `(state) => nodeId` routers are unaffected
+- `VersionConflictError` — thrown when a snapshot is saved at a version that already exists, so a host can tell "another process advanced this conversation" apart from a storage failure. The engine never retries; the error propagates out of `invoke()`
+- `TurnLimitExceededError` and the `maxNodesPerTurn` option (default `50`) — a cycle of `autoAdvance` nodes previously exhausted the heap and killed the process. The bound is per turn and resets each turn, so cycles through nodes that wait for input still run indefinitely. The error's `path` names the nodes executed during the failed turn
+
+### Fixed
+
+- `MemoryStorageAdapter` stored and returned snapshots by reference, so two graphs that loaded the same snapshot shared one mutable `tracker` and overwrote each other's execution position. Snapshots are now copied in and out
+- `MemoryStorageAdapter.saveSnapshot` pushed blindly; it now rejects a `(flowId, version)` that already exists
+- `MongoStorageAdapter` now creates a unique index on `{ flowId, version }` and translates duplicate-key errors (code `11000`) into `VersionConflictError` instead of leaking a driver-shaped error
+
+### Changed
+
+- `StorageAdapter.saveSnapshot` now documents that implementations MUST reject a duplicate `(flowId, version)` by throwing `VersionConflictError`
+- `StateManager.save` accepts an optional `baseVersion` and derives the next version from it, rather than from an in-process counter map. Omitting it reads the current latest from storage
+
+### Removed
+
+- `StateManager.initializeVersionCounter()` — it existed only to prime the in-process version counter map, which no longer exists
+
 ## [0.5.1] - 2026-07-15
 
 ### Fixed

@@ -24,10 +24,12 @@ async function demo() {
     submit_choice: z.string().optional(),
     just_testing: z.string().optional(),
 
-    // Array field with reducer that concatenates arrays
+    // messages is the accumulated history, so the reducer concatenates.
+    // What to send the user each turn comes from graph.emittedMessages,
+    // not from this field — see docs/guide/turns.md
     messages: z.array(z.string()).registerReducer(registry, {
       reducer: {
-        fn: (prev, next) => next, // Replace previous messages with new ones
+        fn: (prev, next) => [...prev, ...next],
       },
       default: () => [] as string[],
     }),
@@ -218,28 +220,19 @@ async function demo() {
 
   console.log('=== Flow Start ===\n');
 
-  // Initial step
-  let result: InferState<typeof WorkflowState> = {
-    messages: [],
-  };
-
-  // Conversation loop
+  // Conversation loop.
+  // Two graph instances share one storage adapter and take alternate turns —
+  // the same thing several processes behind a load balancer would do.
   let i = 0;
   while (!(flow.isDone || flow2.isDone)) {
     i += 1;
     const userInput = await askUser('You: ');
 
-    result =
-      i % 2 === 0
-        ? await flow.invoke({
-            userMessage: userInput,
-          })
-        : await flow2.invoke({
-            userMessage: userInput,
-          });
+    const active = i % 2 === 0 ? flow : flow2;
+    await active.invoke({ userMessage: userInput });
 
-    // Display bot messages
-    result.messages.forEach((msg: string) =>
+    // Send only what this turn produced
+    active.emittedMessages.forEach((msg: string) =>
       console.log(`Bot${i % 2 === 0 ? '1' : '2'}: ${msg}`)
     );
   }

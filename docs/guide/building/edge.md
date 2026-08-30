@@ -6,7 +6,7 @@ Use `START` and `END` for graph boundaries.
 ## Basics
 
 - **From**: a node id or `START`
-- **To**: a node id, `END`, a function `(state) => nextNodeId`, or a JSON-based router object
+- **To**: a node id, `END`, a function `(state, event) => nextNodeId`, or a JSON-based router object
 
 ## Simple Edges
 
@@ -25,6 +25,17 @@ Use a function to determine the next node based on state:
 // Conditional routing with function
 .addEdge('choose', (state) => (state.isAdmin ? 'admin_node' : 'user_node'))
 ```
+
+Router functions may be `async`, and receive the current event as a second argument, so they
+can branch on structured input without routing through state first:
+
+```typescript
+.addEdge('menu', (state, event) =>
+  event.payload?.buttonId === 'billing' ? 'billing' : 'support'
+)
+```
+
+JSON-based routers (below) read state only, which is what keeps them serializable.
 
 ## JSON-based Routing
 

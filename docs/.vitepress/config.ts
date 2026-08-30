@@ -13,6 +13,7 @@ export default {
     sidebar: {
       '/guide/': [
         { text: 'Getting Started', link: '/guide/getting-started' },
+        { text: 'Turns', link: '/guide/turns' },
         { text: 'The Graph', link: '/guide/graph' },
         { text: 'State Management', link: '/guide/state-management' },
         { text: 'Storage & Persistence', link: '/guide/storage-persistence' },

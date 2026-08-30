@@ -27,19 +27,43 @@ const graph = new ChatGraphBuilder({ schema: State })
     action: { message: "Hi! What's your name?" },
     validate: {
       answerKey: 'name',
-      rules: { regex: '\\w+', errorMessage: 'Please enter a valid name' },
+      rules: [{ regex: '\\w+', errorMessage: 'Please enter a valid name' }],
     },
   })
   .addNode({
     id: 'done',
     autoAdvance: true,
-    action: { message: `Nice to meet you, {{name}}!` },
+    action: { message: 'Nice to meet you, {{name}}!' },
   })
   .addEdge(START, 'greet')
   .addEdge('greet', 'done')
   .addEdge('done', END)
   .compile({ id: 'onboarding' });
+```
+
+## Driving the conversation
+
+Each call to `invoke()` is one **turn**. Send whatever `emittedMessages` returns — those are
+the messages that turn produced:
+
+```typescript
+await graph.invoke({ userMessage: 'hello' });
+graph.emittedMessages; // ["Hi! What's your name?"]
 
 await graph.invoke({ userMessage: 'John' });
-console.log(graph.state.messages);
+graph.emittedMessages; // ['Nice to meet you, John!']
+
+graph.isDone; // true
 ```
+
+::: warning Send `emittedMessages`, not `state.messages`
+`state.messages` is the accumulated history and depends on your reducer. `emittedMessages`
+is what this turn produced, which is what you send to the user. See [Turns](./turns).
+:::
+
+## Next steps
+
+- [Turns](./turns) — the turn boundary, event payloads, and cycle safety
+- [The Graph](./graph) — builder and JSON-style construction
+- [State Management](./state-management) — schemas, reducers, defaults
+- [Storage & Persistence](./storage-persistence) — snapshots and stateless hosts

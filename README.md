@@ -29,7 +29,7 @@ const graph = new ChatGraphBuilder({ schema: State })
     action: { message: "Hi! What's your name?" },
     validate: {
       answerKey: 'name',
-      rules: { regex: '\\w+', errorMessage: 'Please enter a valid name' },
+      rules: [{ regex: '\\w+', errorMessage: 'Please enter a valid name' }],
     },
   })
   .addNode({
@@ -42,10 +42,13 @@ const graph = new ChatGraphBuilder({ schema: State })
   .addEdge('farewell', END)
   .compile({ id: 'onboarding' });
 
-// 3) Run
+// 3) Run — one invoke() is one turn
 await graph.invoke({ userMessage: 'John' });
-console.log(graph.state.messages); // ["Nice to meet you, John!"]
+console.log(graph.emittedMessages); // ["Nice to meet you, John!"]
 ```
+
+Send `emittedMessages` to the user: it holds exactly what the current turn produced.
+`state.messages` is the accumulated history and depends on your reducer.
 
 ## Persistence (optional)
 
@@ -82,6 +85,17 @@ const graph = new ChatGraphBuilder({ schema: State })
   // ...nodes/edges...
   .compile({ id: 'onboarding', storageAdapter: mongo });
 ```
+
+## Features
+
+- **Two-phase nodes** — an action phase and a validation phase, so a node can ask and then
+  check the answer
+- **Typed state** — Zod schemas with optional per-field reducers
+- **Serializable graphs** — build with the chaining API or plain JSON config
+- **Per-turn output** — `emittedMessages` tells you what to send, every turn
+- **Structured input** — `ChatEvent.payload` carries button ids, selections, coordinates
+- **Stateless-host ready** — versioned snapshots with typed `VersionConflictError` on
+  concurrent writes, and a per-turn bound that stops runaway `autoAdvance` cycles
 
 ## Documentation
 

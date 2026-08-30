@@ -10,6 +10,10 @@ This only can be used with nodes that expect user input (i.e., `autoAdvance` set
 - Function: `(state, event) => ({ isValid, state?, errorMessage? })`
 - Rules object: `{ rules: [{ regex, errorMessage }], answerKey?: string }`
 
+`rules` is an **array**, evaluated in order; the first failing rule's `errorMessage` is
+emitted and the node re-asks. Rule patterns are strings passed to `new RegExp()`, so
+backslashes must be escaped: `'^\\d+$'`, not `'^\d+$'` (which is just `^d+$`).
+
 ## Examples
 
 ```typescript
@@ -31,12 +35,31 @@ This only can be used with nodes that expect user input (i.e., `autoAdvance` set
   action: { message: 'Your age?' },
   validate: {
     rules: [
-      { regex: "^\d+$", errorMessage: 'Enter a number for age' },
-      { regex: "^(?:1[01][0-9]|120|[1-9]?[0-9])$", errorMessage: 'Enter an age between 0 and 120' }
+      { regex: '^\\d+$', errorMessage: 'Enter a number for age' },
+      { regex: '^(?:1[01][0-9]|120|[1-9]?[0-9])$', errorMessage: 'Enter an age between 0 and 120' }
     ],
     answerKey: 'age' // the accepted age will be stored in state.age
   },
 }
 ```
+
+## Reading structured input
+
+Validators receive the whole event, so a function validator can read `event.payload` — the
+stable id behind a tapped button, a selected row, coordinates:
+
+```typescript
+{
+  id: 'menu',
+  action: { message: 'What do you need?' },
+  validate: (s, e) => ({
+    isValid: true,
+    state: { choice: String(e.payload?.buttonId ?? '') },
+  }),
+}
+```
+
+`payload` lasts one turn only, so write anything you need later into state. See
+[Turns](../../turns).
 
 Validation does not enforce schema at runtime — add checks you need.
