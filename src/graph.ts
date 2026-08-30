@@ -60,6 +60,8 @@ export class ChatGraph<
   private readonly schema?: Schema;
   private readonly registry?: StateRegistry;
   private readonly stateManager?: StateManager<Schema>;
+  /** Messages produced during the current turn. Never persisted. */
+  private emitted: string[] = [];
   private readonly id: string;
   private readonly autoSave: boolean = false;
 
@@ -111,6 +113,15 @@ export class ChatGraph<
   /** Whether the flow has completed */
   get isDone(): boolean {
     return this.tracker.__isDone;
+  }
+
+  /**
+   * Messages produced by the most recent invoke(), in order.
+   * Cleared at the start of each turn and never persisted, so a restored
+   * snapshot starts a turn with an empty list.
+   */
+  get emittedMessages(): string[] {
+    return [...this.emitted];
   }
 
   /**
@@ -309,6 +320,8 @@ export class ChatGraph<
    * @returns The updated state
    */
   async invoke(event: ChatEvent): Promise<InferState<Schema>> {
+    this.emitted = [];
+
     if (this.stateManager !== undefined) {
       const snapshot = await this.stateManager.load(this.id);
       if (snapshot !== null) {
@@ -368,6 +381,30 @@ export class ChatGraph<
     }
   }
 
+  /**
+   * Applies a state update through the schema reducers, recording any messages
+   * it carries as output of the current turn.
+   *
+   * Messages are recorded from the update rather than from the merged state:
+   * what a turn produced is independent of what the `messages` reducer chooses
+   * to keep, so no reducer configuration can hide or duplicate turn output.
+   */
+  private applyStateUpdate(update: Partial<InferState<Schema>>): void {
+    const produced: unknown = (update as { messages?: unknown }).messages;
+    if (Array.isArray(produced)) {
+      for (const message of produced as unknown[]) {
+        this.emitted.push(String(message));
+      }
+    }
+
+    this.graphState = mergeState(
+      this.schema,
+      this.registry,
+      this.graphState,
+      update
+    );
+  }
+
   private async executeNodeAction(
     node: Node<Schema, Runnable>,
     event: ChatEvent
@@ -376,12 +413,7 @@ export class ChatGraph<
     this.tracker.__isActionTaken = true;
 
     // Apply state update with reducers (no runtime validation)
-    this.graphState = mergeState(
-      this.schema,
-      this.registry,
-      this.graphState,
-      stateUpdate
-    );
+    this.applyStateUpdate(stateUpdate);
 
     if (node.autoAdvance === true) {
       this.tracker.__isResponseValid = true;
@@ -408,25 +440,15 @@ export class ChatGraph<
     // Merge state using schema reducers if available
     if (validationResult.state !== undefined) {
       // Apply state update with reducers (no runtime validation)
-      this.graphState = mergeState(
-        this.schema,
-        this.registry,
-        this.graphState,
-        validationResult.state
-      );
+      this.applyStateUpdate(validationResult.state);
     }
 
     if (!validationResult.isValid) {
       // Add error message to state messages if validation failed
       if (validationResult.errorMessage !== undefined) {
-        this.graphState = mergeState(
-          this.schema,
-          this.registry,
-          this.graphState,
-          {
-            messages: [validationResult.errorMessage],
-          } as unknown as Partial<InferState<Schema>>
-        );
+        this.applyStateUpdate({
+          messages: [validationResult.errorMessage],
+        } as unknown as Partial<InferState<Schema>>);
       }
     } else {
       // Validation passed
