@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-08-30
+
+### Fixed
+
+- `0.6.0` was published without rebuilding `dist/`, so the tarball carried `0.5.1` compiled output: none of the features listed under `0.6.0` below existed at runtime, and importing `VersionConflictError`, `TurnLimitExceededError` or reading `emittedMessages` yielded `undefined`. `0.6.1` ships the code `0.6.0` described — upgrade if you installed `0.6.0`
+- `mergeState`'s schemaless branch no longer violates the project's own `no-unsafe-assignment` rule. `npm run lint` had been failing, which meant the `prepublishOnly` guard (clean → lint → typecheck → build → test) could not complete
+
 ## [0.6.0] - 2026-08-30
 
 ### Added

@@ -178,9 +178,9 @@ export function mergeState<S extends StateSchema>(
     for (const [key, value] of Object.entries(
       updates as Record<string, unknown>
     )) {
-      const current = result[key];
+      const current: unknown = result[key];
       if (Array.isArray(value) && Array.isArray(current)) {
-        result[key] = [...current, ...value];
+        result[key] = [...(current as unknown[]), ...(value as unknown[])];
       } else {
         result[key] = value;
       }
