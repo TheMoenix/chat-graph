@@ -19,6 +19,16 @@ export type Tracker<Nodes extends readonly NodeId[]> = {
  */
 export type ChatEvent = {
   userMessage: string;
+  /**
+   * Structured input accompanying the message, such as the developer-defined
+   * id behind a tapped button, a selected row, or shared coordinates.
+   *
+   * Opaque to the engine: it is passed through untouched to node actions,
+   * validators and router functions, and is never persisted. It belongs to a
+   * single turn — a validator that needs a payload value to survive the turn
+   * must write it into state.
+   */
+  payload?: Record<string, unknown>;
 };
 
 /**
@@ -182,7 +192,8 @@ type RouterNode<
   Nodes extends readonly NodeId[],
   Schema extends StateSchema = StateSchema,
 > = (
-  state: InferState<Schema>
+  state: InferState<Schema>,
+  event: ChatEvent
 ) =>
   | Nodes[number]['id']
   | typeof END

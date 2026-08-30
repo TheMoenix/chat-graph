@@ -336,7 +336,7 @@ export class ChatGraph<
 
   private async subInvoke(event: ChatEvent): Promise<void> {
     if (this.tracker.__currentNodeId === START) {
-      await this.getNextNode();
+      await this.getNextNode(event);
     }
     await this.executeNode(event);
 
@@ -345,7 +345,7 @@ export class ChatGraph<
       this.tracker.__isActionTaken === true &&
       this.tracker.__isResponseValid === true
     ) {
-      await this.getNextNode();
+      await this.getNextNode(event);
 
       // Check if flow is done
       if (this.tracker.__currentNodeId === END) {
@@ -464,7 +464,7 @@ export class ChatGraph<
   /**
    * Determines the next node based on edges and conditional routing
    */
-  private async getNextNode(): Promise<void> {
+  private async getNextNode(event: ChatEvent): Promise<void> {
     if (this.edges.has(this.tracker.__currentNodeId)) {
       const to = this.edges.get(this.tracker.__currentNodeId);
       if (to === undefined) {
@@ -475,7 +475,7 @@ export class ChatGraph<
         return;
       }
       if (typeof to === 'function') {
-        this.tracker.__currentNodeId = await to(this.graphState);
+        this.tracker.__currentNodeId = await to(this.graphState, event);
       } else {
         this.tracker.__currentNodeId = to;
       }
